@@ -25,9 +25,11 @@ services:
   - type: web
     name: perfectfit-api
     runtime: node
-    plan: starter # NOT free — free spins down and breaks Stripe webhooks + Bull background jobs
+    plan: free # ⚠ free spins down after 15m idle — see caveats; webhooks/jobs are unreliable
     region: frankfurt
-    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm --filter @thread/database exec prisma generate && pnpm exec turbo run build --filter=@thread/api...
+    # `prisma db push` runs in the build (free tier has no Shell / pre-deploy hook) so the
+    # schema is created/synced on each deploy. Safe & idempotent (no --accept-data-loss).
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm --filter @thread/database exec prisma generate && pnpm exec turbo run build --filter=@thread/api... && pnpm --filter @thread/database exec prisma db push
     startCommand: pnpm --filter @thread/api start
     healthCheckPath: /v1/health
     envVars:
@@ -81,7 +83,7 @@ services:
   - type: web
     name: perfectfit-storefront
     runtime: node
-    plan: starter
+    plan: free
     region: frankfurt
     buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm exec turbo run build --filter=@thread/storefront...
     startCommand: pnpm --filter @thread/storefront exec next start -p $PORT -H 0.0.0.0
@@ -97,7 +99,7 @@ services:
   - type: web
     name: perfectfit-seller
     runtime: node
-    plan: starter
+    plan: free
     region: frankfurt
     buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm exec turbo run build --filter=@thread/seller...
     startCommand: pnpm --filter @thread/seller exec next start -p $PORT -H 0.0.0.0
@@ -113,7 +115,7 @@ services:
   - type: web
     name: perfectfit-admin
     runtime: node
-    plan: starter
+    plan: free
     region: frankfurt
     buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm exec turbo run build --filter=@thread/admin...
     startCommand: pnpm --filter @thread/admin exec next start -p $PORT -H 0.0.0.0
