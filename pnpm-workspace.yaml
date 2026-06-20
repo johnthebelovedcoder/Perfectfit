@@ -1,0 +1,7 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+configDependencies:
+  tsup:
+    integrity: 8.5.1+sha512-xtgkqwdhpKWr3tKPmCkvYmS9xnQK3m3XgxZHwSUjvfTjp7YfXe5tT3GgWi0F2N+ZSMsOeWeZFh7ZZFg5iPhing==
+    tarball: https://registry.npmjs.org/tsup/-/tsup-8.5.1.tgz

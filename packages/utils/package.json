@@ -1,0 +1,21 @@
+{
+  "name": "@thread/utils",
+  "version": "0.0.1",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs --dts --out-dir dist"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "devDependencies": {
+    "@thread/config": "workspace:*",
+    "@types/node": "^25.9.2",
+    "typescript": "^5.7.0"
+  }
+}

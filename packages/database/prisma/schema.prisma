@@ -1,0 +1,466 @@
+// Thread — Prisma Schema
+// All monetary values stored as Int (cents, smallest USD unit)
+// IDs use cuid() — never uuid() or auto-increment
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL") // pooled (-pooler) endpoint, used by the running API
+  directUrl = env("DIRECT_URL")   // direct endpoint, used by prisma db push / migrate
+}
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum Role {
+  BUYER
+  SELLER
+  ADMIN
+}
+
+enum SubmissionStatus {
+  PENDING_REVIEW
+  AWAITING_MORE_INFO
+  UNDER_NEGOTIATION
+  ACCEPTED
+  REJECTED
+  AWAITING_SHIPMENT
+  RECEIVED_AT_WAREHOUSE
+  LIVE
+  SOLD
+  PAYOUT_QUEUED
+  PAYOUT_PROCESSED
+}
+
+enum ItemCondition {
+  BRAND_NEW
+  EXCELLENT
+  GOOD
+  FAIR
+}
+
+enum ItemCategory {
+  WOMENS_AFRICAN_WEAR
+  MENS_AFRICAN_WEAR
+  CHILDRENS_AFRICAN_WEAR
+  ANKARA_OUTFITS
+  LACE_OUTFITS
+  ASO_OKE_ATTIRE
+  ADIRE_WEAR
+  KAFTANS_AGBADA
+  DRESSES_GOWNS
+  SKIRTS_BLOUSES
+  TRADITIONAL_WEDDING_ATTIRE
+  ACCESSORIES
+  SHOES_BAGS
+  PRELOVED_THRIFTED
+}
+
+enum GenderTarget {
+  MEN
+  WOMEN
+  UNISEX
+  KIDS
+}
+
+enum OrderStatus {
+  PLACED
+  PROCESSING
+  DISPATCHED
+  OUT_FOR_DELIVERY
+  DELIVERED
+  RETURN_REQUESTED
+  RETURNED
+  REFUNDED
+  CANCELLED
+}
+
+enum PayoutStatus {
+  QUEUED
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum NotificationType {
+  SUBMISSION_RECEIVED
+  SUBMISSION_ACCEPTED
+  SUBMISSION_REJECTED
+  SUBMISSION_MORE_INFO
+  NEGOTIATION_OFFER
+  ITEM_LIVE
+  ITEM_SOLD
+  PAYOUT_QUEUED
+  PAYOUT_PROCESSED
+  ORDER_PLACED
+  ORDER_DISPATCHED
+  ORDER_DELIVERED
+  NEW_SUBMISSION_ADMIN
+  NEW_ORDER_ADMIN
+  RETURN_REQUESTED
+}
+
+// ─── Models ───────────────────────────────────────────────────────────────────
+
+model User {
+  id        String    @id @default(cuid())
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  email         String  @unique
+  passwordHash  String
+  role          Role    @default(BUYER)
+  emailVerified Boolean @default(false)
+  mfaEnabled    Boolean @default(false)
+  mfaSecret     String?
+
+  // Buyer profile (optional)
+  buyerProfile BuyerProfile?
+
+  // Seller profile
+  sellerProfile SellerProfile?
+
+  // Admin profile
+  adminProfile AdminProfile?
+
+  // Notifications
+  notifications Notification[]
+
+  // Sessions (Better Auth)
+  sessions Session[]
+
+  @@index([email])
+  @@index([role])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?
+
+  @@index([userId])
+  @@index([token])
+}
+
+model BuyerProfile {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  firstName String?
+  lastName  String?
+  phone     String?
+
+  orders Order[]
+}
+
+model SellerProfile {
+  id        String    @id @default(cuid())
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  firstName String
+  lastName  String
+  phone     String
+  city      String
+
+  // Bank details — ENCRYPTED at service layer before write
+  bankAccountName   String // ENCRYPTED
+  bankAccountNumber String // ENCRYPTED
+  bankName          String
+
+  isVerified Boolean @default(false)
+  adminNotes String?
+
+  submissions Submission[]
+  payouts     Payout[]
+
+  @@index([userId])
+}
+
+model AdminProfile {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  firstName   String
+  lastName    String
+  permissions String[] @default([])
+
+  reviewedSubmissions Submission[] @relation("ReviewedBy")
+  processedPayouts    Payout[]     @relation("ProcessedBy")
+}
+
+// ─── Items & Submissions ──────────────────────────────────────────────────────
+
+model Submission {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sellerId String
+  seller   SellerProfile @relation(fields: [sellerId], references: [id])
+
+  // Item basics
+  category    ItemCategory
+  itemType    String
+  brand       String?
+  size        String
+  genderTarget GenderTarget
+
+  // Condition
+  condition     ItemCondition
+  conditionNote String?
+
+  // Photos (Cloudinary public_ids)
+  photos String[]
+
+  // Descriptions
+  sellerDescription String
+  adminDescription  String?
+
+  // Pricing (kobo)
+  desiredPayoutPrice Int
+  agreedPayoutPrice  Int?
+  retailPrice        Int?
+
+  // Status
+  status          SubmissionStatus @default(PENDING_REVIEW)
+  rejectionReason String?
+  rejectionNote   String?
+  adminNote       String?
+  moreInfoRequest String?
+
+  // Review
+  reviewedById String?
+  reviewedBy   AdminProfile? @relation("ReviewedBy", fields: [reviewedById], references: [id])
+  reviewedAt   DateTime?
+
+  // Resubmission tracking
+  resubmissionCount Int       @default(0)
+  cooldownUntil     DateTime?
+
+  // Linked live item (after acceptance + warehouse receipt)
+  item Item?
+
+  @@index([sellerId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model Item {
+  id        String    @id @default(cuid())
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  submissionId String?     @unique
+  submission   Submission? @relation(fields: [submissionId], references: [id])
+
+  // Catalogue fields (admin-edited)
+  slug        String  @unique
+  title       String
+  description String
+  category    ItemCategory
+  itemType    String
+  brand       String?
+  size        String
+  genderTarget GenderTarget
+  condition   ItemCondition
+
+  // Photos (Cloudinary public_ids — moved to items/ folder)
+  photos String[]
+
+  // Pricing (kobo)
+  retailPrice       Int
+  agreedPayoutPrice Int
+
+  // Status
+  isLive       Boolean   @default(false)
+  publishedAt  DateTime?
+  soldAt       DateTime?
+
+  // Relations
+  orderItems OrderItem[]
+  payout     Payout?
+  reviews    Review[]
+
+  @@index([slug])
+  @@index([isLive])
+  @@index([category])
+  @@index([condition])
+  @@index([retailPrice])
+  // Composite indexes for the catalogue query (filter isLive [+category], sort publishedAt desc).
+  @@index([isLive, publishedAt])
+  @@index([isLive, category, publishedAt])
+}
+
+// ─── Orders ───────────────────────────────────────────────────────────────────
+
+model Order {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  orderNumber String @unique @default(cuid())
+
+  // Buyer — null for guest orders
+  buyerProfileId String?
+  buyerProfile   BuyerProfile? @relation(fields: [buyerProfileId], references: [id])
+
+  // Guest order identification
+  guestToken String? @unique
+  guestEmail String?
+
+  // Delivery details
+  firstName       String
+  lastName        String
+  email           String
+  phone           String
+  addressLine1    String
+  addressLine2    String?
+  city            String
+  state           String
+  postalCode      String?
+
+  // Payment
+  totalAmountKobo    Int
+  paymentMethod      String
+  paymentReference   String?  @unique
+  paymentStatus      String   @default("PENDING")
+  paidAt             DateTime?
+
+  // Order status
+  status         OrderStatus @default(PLACED)
+  trackingNumber String?
+  courierName    String?
+  dispatchedAt   DateTime?
+  deliveredAt    DateTime?
+
+  // Returns
+  returnRequestedAt DateTime?
+  returnReason      String?
+  returnResolvedAt  DateTime?
+  refundAmountKobo  Int?
+
+  orderItems OrderItem[]
+
+  @@index([orderNumber])
+  @@index([guestToken])
+  @@index([email])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model OrderItem {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id])
+
+  itemId String
+  item   Item   @relation(fields: [itemId], references: [id])
+
+  // Snapshot of price at time of purchase (kobo)
+  priceKobo Int
+
+  @@unique([orderId, itemId])
+  @@index([orderId])
+  @@index([itemId])
+}
+
+// ─── Payouts ──────────────────────────────────────────────────────────────────
+
+model Payout {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sellerId String
+  seller   SellerProfile @relation(fields: [sellerId], references: [id])
+
+  itemId String @unique
+  item   Item   @relation(fields: [itemId], references: [id])
+
+  // Amount (kobo) — what the seller agreed to receive
+  amountKobo Int
+  status     PayoutStatus @default(QUEUED)
+
+  // Processing
+  processedById String?
+  processedBy   AdminProfile? @relation("ProcessedBy", fields: [processedById], references: [id])
+  processedAt   DateTime?
+
+  // Settlement
+  settlementDueAt DateTime?
+  transferReference String?
+
+  @@index([sellerId])
+  @@index([status])
+}
+
+// ─── Notifications ────────────────────────────────────────────────────────────
+
+model Notification {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type    NotificationType
+  title   String
+  body    String
+  isRead  Boolean  @default(false)
+  readAt  DateTime?
+
+  // Contextual reference (polymorphic — one of these will be set)
+  submissionId String?
+  orderId      String?
+  itemId       String?
+  payoutId     String?
+
+  @@index([userId, isRead])
+  @@index([userId, createdAt])
+}
+
+// ─── Reviews ──────────────────────────────────────────────────────────────────
+
+model Review {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  itemId String
+  item   Item   @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  rating     Int    // 1–5
+  title      String?
+  body       String
+  buyerName  String
+  buyerEmail String?
+  verified   Boolean @default(false) // true if this reviewer actually bought the item
+
+  @@index([itemId])
+  @@index([itemId, rating])
+}
