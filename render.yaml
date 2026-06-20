@@ -1,0 +1,126 @@
+# Render Blueprint for Perfect Fit.
+# Deploy: Render Dashboard → New → Blueprint → connect this repo → Apply.
+# Then fill the `sync: false` secrets (Stripe, Cloudinary, ZeptoMail, FIELD_ENCRYPTION_KEY)
+# in each service's Environment tab.
+#
+# Service URLs are predictable: https://<service-name>.onrender.com
+# If a name is taken globally, Render appends a suffix — update the *_URL values to match.
+
+databases:
+  - name: perfectfit-db
+    databaseName: perfectfit
+    user: perfectfit
+    plan: free # 90-day free Postgres; upgrade to "basic"+ for production (backups, no expiry)
+    region: frankfurt
+
+services:
+  # ─── Redis (Bull queues) ──────────────────────────────────────────────────────
+  - type: keyvalue
+    name: perfectfit-redis
+    plan: free
+    region: frankfurt
+    ipAllowList: [] # internal-only access from the API
+
+  # ─── API (NestJS) ─────────────────────────────────────────────────────────────
+  - type: web
+    name: perfectfit-api
+    runtime: node
+    plan: starter # NOT free — free spins down and breaks Stripe webhooks + Bull background jobs
+    region: frankfurt
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm --filter @thread/database exec prisma generate && pnpm exec turbo run build --filter=@thread/api...
+    startCommand: pnpm --filter @thread/api start
+    healthCheckPath: /v1/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase: { name: perfectfit-db, property: connectionString }
+      - key: DIRECT_URL # Render Postgres has no pooler, so same as DATABASE_URL
+        fromDatabase: { name: perfectfit-db, property: connectionString }
+      - key: REDIS_URL
+        fromService: { name: perfectfit-redis, type: keyvalue, property: connectionString }
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      # Must be 64 hex chars (openssl rand -hex 32). Set manually + BACK IT UP.
+      - key: FIELD_ENCRYPTION_KEY
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      - key: CLOUDINARY_UPLOAD_PRESET
+        sync: false
+      - key: ZEPTO_API_URL
+        sync: false
+      - key: ZEPTO_API_TOKEN
+        sync: false
+      - key: THREAD_WAREHOUSE_ADDRESS
+        sync: false
+      - key: THREAD_WAREHOUSE_CONTACT_NUMBER
+        sync: false
+      # Public origins — used for CORS (prod refuses localhost) + email links.
+      - key: NEXT_PUBLIC_STOREFRONT_URL
+        value: https://perfectfit-storefront.onrender.com
+      - key: NEXT_PUBLIC_SELLER_URL
+        value: https://perfectfit-seller.onrender.com
+      - key: NEXT_PUBLIC_ADMIN_URL
+        value: https://perfectfit-admin.onrender.com
+      - key: SENTRY_DSN
+        sync: false
+      # Algolia optional — leave unset to use DB search.
+
+  # ─── Storefront (Next.js) ─────────────────────────────────────────────────────
+  - type: web
+    name: perfectfit-storefront
+    runtime: node
+    plan: starter
+    region: frankfurt
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm exec turbo run build --filter=@thread/storefront...
+    startCommand: pnpm --filter @thread/storefront exec next start -p $PORT -H 0.0.0.0
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NEXT_PUBLIC_API_URL
+        value: https://perfectfit-api.onrender.com
+      - key: NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
+        sync: false
+
+  # ─── Seller portal (Next.js) ──────────────────────────────────────────────────
+  - type: web
+    name: perfectfit-seller
+    runtime: node
+    plan: starter
+    region: frankfurt
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm exec turbo run build --filter=@thread/seller...
+    startCommand: pnpm --filter @thread/seller exec next start -p $PORT -H 0.0.0.0
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NEXT_PUBLIC_API_URL
+        value: https://perfectfit-api.onrender.com
+      - key: NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
+        sync: false
+
+  # ─── Admin dashboard (Next.js) ────────────────────────────────────────────────
+  - type: web
+    name: perfectfit-admin
+    runtime: node
+    plan: starter
+    region: frankfurt
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm exec turbo run build --filter=@thread/admin...
+    startCommand: pnpm --filter @thread/admin exec next start -p $PORT -H 0.0.0.0
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NEXT_PUBLIC_API_URL
+        value: https://perfectfit-api.onrender.com
+      - key: NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
+        sync: false
