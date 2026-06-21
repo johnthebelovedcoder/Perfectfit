@@ -29,7 +29,7 @@ services:
     region: frankfurt
     # `prisma db push` runs in the build (free tier has no Shell / pre-deploy hook) so the
     # schema is created/synced on each deploy. Safe & idempotent (no --accept-data-loss).
-    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm --filter @thread/database exec prisma generate && pnpm exec turbo run build --filter=@thread/api... && pnpm --filter @thread/database exec prisma db push
+    buildCommand: pnpm install --frozen-lockfile && pnpm --filter @thread/database exec prisma generate && pnpm exec turbo run build --filter=@thread/api... && pnpm --filter @thread/database exec prisma db push
     startCommand: pnpm --filter @thread/api start
     healthCheckPath: /v1/health
     envVars:
@@ -85,7 +85,7 @@ services:
     runtime: node
     plan: free
     region: frankfurt
-    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm exec turbo run build --filter=@thread/storefront...
+    buildCommand: pnpm install --frozen-lockfile && pnpm exec turbo run build --filter=@thread/storefront...
     startCommand: pnpm --filter @thread/storefront exec next start -p $PORT -H 0.0.0.0
     envVars:
       - key: NODE_ENV
@@ -101,7 +101,7 @@ services:
     runtime: node
     plan: free
     region: frankfurt
-    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm exec turbo run build --filter=@thread/seller...
+    buildCommand: pnpm install --frozen-lockfile && pnpm exec turbo run build --filter=@thread/seller...
     startCommand: pnpm --filter @thread/seller exec next start -p $PORT -H 0.0.0.0
     envVars:
       - key: NODE_ENV
@@ -117,7 +117,7 @@ services:
     runtime: node
     plan: free
     region: frankfurt
-    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm exec turbo run build --filter=@thread/admin...
+    buildCommand: pnpm install --frozen-lockfile && pnpm exec turbo run build --filter=@thread/admin...
     startCommand: pnpm --filter @thread/admin exec next start -p $PORT -H 0.0.0.0
     envVars:
       - key: NODE_ENV
