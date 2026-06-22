@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -11,7 +11,7 @@ import type { Login } from "@thread/types";
 
 const API_URL = process.env["NEXT_PUBLIC_API_URL"] ?? "http://localhost:3001";
 
-export default function AdminLoginPage() {
+function AdminLoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
@@ -145,5 +145,13 @@ export default function AdminLoginPage() {
         </p>
       </div>
     </main>
+  );
+}
+
+export default function AdminLoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <AdminLoginForm />
+    </Suspense>
   );
 }
