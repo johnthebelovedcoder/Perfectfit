@@ -28,8 +28,8 @@ export const envSchema = z.object({
   ALGOLIA_ADMIN_KEY: z.string().optional(),
   ALGOLIA_INDEX_NAME: z.string().default("thread_items"),
 
-  ZEPTO_API_URL: z.string().url(),
-  ZEPTO_API_TOKEN: z.string().min(1),
+  RESEND_API_KEY: z.string().min(1),
+  RESEND_FROM: z.string().optional(), // e.g. "Perfect Fit <noreply@yourdomain.com>"; defaults to onboarding@resend.dev
 
   THREAD_WAREHOUSE_ADDRESS: z.string().min(1),
   THREAD_WAREHOUSE_CONTACT_NUMBER: z.string().min(1),

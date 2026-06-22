@@ -1,6 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { render } from "@react-email/render";
+import { Resend } from "resend";
 import { DatabaseService } from "../../common/database/database.service";
 import { formatPrice } from "@thread/utils";
 import {
@@ -22,36 +23,31 @@ import {
 @Injectable()
 export class NotificationsService {
   private readonly logger = new Logger(NotificationsService.name);
+  private readonly resend: Resend;
+  private readonly from: string;
 
   constructor(
     private db: DatabaseService,
     private config: ConfigService
-  ) {}
+  ) {
+    this.resend = new Resend(this.config.get<string>("RESEND_API_KEY"));
+    // Use a verified-domain sender in production; onboarding@resend.dev works for testing.
+    this.from = this.config.get<string>("RESEND_FROM") ?? "Perfect Fit <onboarding@resend.dev>";
+  }
 
   private async sendEmail(to: string, subject: string, react: React.ReactElement) {
     const html = await render(react);
-    const apiUrl = this.config.get<string>("ZEPTO_API_URL")!;
-    const token = this.config.get<string>("ZEPTO_API_TOKEN")!;
-
-    const response = await fetch(apiUrl, {
-      method: "POST",
-      headers: {
-        accept: "application/json",
-        "content-type": "application/json",
-        authorization: token,
-      },
-      body: JSON.stringify({
-        from: { address: "noreply@thread.com", name: "Perfect Fit" },
-        to: [{ email_address: { address: to } }],
-        reply_to: [{ address: "support@thread.com", name: "Perfect Fit Support" }],
+    try {
+      const { error } = await this.resend.emails.send({
+        from: this.from,
+        to,
         subject,
-        htmlbody: html,
-      }),
-    });
-
-    if (!response.ok) {
-      const text = await response.text();
-      this.logger.error(`ZeptoMail error sending to ${to}: ${text}`);
+        html,
+        replyTo: "support@thread.com",
+      });
+      if (error) this.logger.error(`Resend error sending to ${to}: ${error.message}`);
+    } catch (e) {
+      this.logger.error(`Resend send failed to ${to}: ${e instanceof Error ? e.message : e}`);
     }
   }
 

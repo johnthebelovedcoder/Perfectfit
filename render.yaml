@@ -60,9 +60,9 @@ services:
         sync: false
       - key: CLOUDINARY_UPLOAD_PRESET
         sync: false
-      - key: ZEPTO_API_URL
+      - key: RESEND_API_KEY
         sync: false
-      - key: ZEPTO_API_TOKEN
+      - key: RESEND_FROM
         sync: false
       - key: THREAD_WAREHOUSE_ADDRESS
         sync: false
