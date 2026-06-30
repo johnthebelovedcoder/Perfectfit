@@ -78,7 +78,7 @@ function AdminLoginForm() {
                   type="email"
                   autoComplete="email"
                   className="w-full bg-[#2a2a2a] text-white placeholder-gray-500 border border-[#3a3a3a] rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:border-gray-500"
-                  placeholder="admin@thread.com"
+                  placeholder="admin@perfectfit.com"
                   {...register("email")}
                 />
               </div>

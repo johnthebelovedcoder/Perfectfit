@@ -76,6 +76,12 @@ function formatDate(d: string) {
 
 const STOREFRONT_URL = process.env.NEXT_PUBLIC_STOREFRONT_URL ?? "http://localhost:3000";
 
+// Warehouse shipping address shown to accepted sellers. Override via env in deploy.
+const WAREHOUSE_NAME = process.env.NEXT_PUBLIC_WAREHOUSE_NAME ?? "Perfect Fit Warehouse";
+const WAREHOUSE_ADDRESS =
+  process.env.NEXT_PUBLIC_WAREHOUSE_ADDRESS ?? "1 Warehouse Way, Tulsa, Oklahoma 74103";
+const WAREHOUSE_CONTACT = process.env.NEXT_PUBLIC_WAREHOUSE_CONTACT ?? "+1 (973) 282-6945";
+
 export default function SubmissionDetailPage({ params }: { params: { id: string } }) {
   const { id } = params;
   const qc = useQueryClient();
@@ -300,9 +306,9 @@ export default function SubmissionDetailPage({ params }: { params: { id: string 
             <p className="text-xs text-purple-700 mt-0.5">Please ship it to our warehouse at the address below. Once shipped, click the button so we know to expect it.</p>
           </div>
           <div className="rounded-lg bg-white border border-purple-100 p-4 space-y-1 text-sm">
-            <p className="font-semibold text-gray-800">Thread Warehouse</p>
-            <p className="text-gray-600">123 Thread Street</p>
-            <p className="text-gray-600">New York, NY 10001</p>
+            <p className="font-semibold text-gray-800">{WAREHOUSE_NAME}</p>
+            <p className="text-gray-600">{WAREHOUSE_ADDRESS}</p>
+            <p className="text-gray-600">{WAREHOUSE_CONTACT}</p>
             <p className="text-xs text-gray-400 mt-2">Include your submission reference: <span className="font-mono">{ref}</span></p>
           </div>
           {sub.agreedPayoutPrice != null && (

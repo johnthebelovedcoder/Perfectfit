@@ -43,11 +43,47 @@ export class NotificationsService {
         to,
         subject,
         html,
-        replyTo: "support@thread.com",
+        replyTo: "fgsperfectfit@gmail.com",
       });
       if (error) this.logger.error(`Resend error sending to ${to}: ${error.message}`);
     } catch (e) {
       this.logger.error(`Resend send failed to ${to}: ${e instanceof Error ? e.message : e}`);
+    }
+  }
+
+  /** Delivers a customer contact-form message to the support inbox. */
+  async sendContactMessage(input: {
+    name: string;
+    email: string;
+    subject: string;
+    message: string;
+  }) {
+    const support = "fgsperfectfit@gmail.com";
+    const escape = (s: string) =>
+      s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    const html = `
+      <h2>New contact message</h2>
+      <p><strong>From:</strong> ${escape(input.name)} &lt;${escape(input.email)}&gt;</p>
+      <p><strong>Topic:</strong> ${escape(input.subject)}</p>
+      <hr />
+      <p style="white-space:pre-wrap">${escape(input.message)}</p>
+    `;
+    try {
+      const { error } = await this.resend.emails.send({
+        from: this.from,
+        to: support,
+        subject: `[Contact] ${input.subject} — ${input.name}`,
+        html,
+        replyTo: input.email,
+      });
+      if (error) {
+        this.logger.error(`Contact email failed: ${error.message}`);
+        return false;
+      }
+      return true;
+    } catch (e) {
+      this.logger.error(`Contact email send failed: ${e instanceof Error ? e.message : e}`);
+      return false;
     }
   }
 

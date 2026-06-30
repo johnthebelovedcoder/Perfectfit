@@ -78,14 +78,14 @@ export function ReviewsSection({ slug, initialReviews, initialStats }: Props) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!rating || !name.trim() || !body.trim()) return;
+    if (!rating || !name.trim() || !body.trim() || !email.trim()) return;
     setSubmitting(true);
     setSubmitError(null);
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001"}/v1/items/${slug}/reviews`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ rating, title: title.trim() || undefined, body: body.trim(), buyerName: name.trim(), buyerEmail: email.trim() || undefined }),
+        body: JSON.stringify({ rating, title: title.trim() || undefined, body: body.trim(), buyerName: name.trim(), buyerEmail: email.trim() }),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({})) as { error?: { message?: string }; message?: string };
@@ -199,9 +199,10 @@ export function ReviewsSection({ slug, initialReviews, initialStats }: Props) {
           </div>
 
           <div>
-            <label className="block text-sm text-gray-500 mb-1">Email <span className="text-gray-400 font-normal">(optional — limits you to one review per item)</span></label>
+            <label className="block text-sm text-gray-500 mb-1">Email <span className="text-gray-400 font-normal">(use the email from your order — only verified buyers can review)</span></label>
             <input
               type="email"
+              required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"

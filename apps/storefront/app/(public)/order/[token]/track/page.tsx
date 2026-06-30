@@ -227,8 +227,8 @@ export default async function TrackPage({ params, searchParams }: Props) {
 
           <p className="mt-6 text-xs text-gray-400 text-center">
             Questions? Email{" "}
-            <a href="mailto:support@perfectfit.com" className="underline hover:text-gray-700">
-              support@perfectfit.com
+            <a href="mailto:fgsperfectfit@gmail.com" className="underline hover:text-gray-700">
+              fgsperfectfit@gmail.com
             </a>
             {" "}or bookmark this page to track your order.
           </p>

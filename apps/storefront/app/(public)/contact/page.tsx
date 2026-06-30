@@ -10,13 +10,31 @@ export default function ContactPage() {
   const [form, setForm] = useState({ name: "", email: "", subject: "", message: "" });
   const [loading, setLoading] = useState(false);
 
+  const [error, setError] = useState<string | null>(null);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    // Simulate submission — wire to email/CRM in production
-    await new Promise((r) => setTimeout(r, 800));
-    setSubmitted(true);
-    setLoading(false);
+    setError(null);
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001"}/v1/contact`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(form),
+        },
+      );
+      if (!res.ok) {
+        const j = (await res.json().catch(() => ({}))) as { error?: { message?: string } };
+        throw new Error(j.error?.message ?? "Could not send your message. Please try again.");
+      }
+      setSubmitted(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not send your message. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -36,8 +54,8 @@ export default function ContactPage() {
           <div className="container mx-auto max-w-4xl">
             <div className="grid sm:grid-cols-3 gap-6 mb-12">
               {[
-                { icon: Mail, title: "Email", value: "hello@perfectfit.com", desc: "For general enquiries" },
-                { icon: MessageSquare, title: "Seller Support", value: "sellers@perfectfit.com", desc: "For seller-specific questions" },
+                { icon: Mail, title: "Email", value: "fgsperfectfit@gmail.com", desc: "For general enquiries" },
+                { icon: MessageSquare, title: "Seller Support", value: "fgsperfectfit@gmail.com", desc: "For seller-specific questions" },
                 { icon: Clock, title: "Response time", value: "Within 24 hours", desc: "Mon–Fri, 9am–6pm" },
               ].map(({ icon: Icon, title, value, desc }) => (
                 <div key={title} className="bg-gray-50 rounded-2xl border border-gray-100 p-6 text-center">
@@ -113,6 +131,9 @@ export default function ContactPage() {
                       placeholder="Describe your issue or question in detail…"
                     />
                   </div>
+                  {error && (
+                    <p className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-xl px-4 py-2.5">{error}</p>
+                  )}
                   <button
                     type="submit"
                     disabled={loading}

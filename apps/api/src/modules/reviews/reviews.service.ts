@@ -6,7 +6,7 @@ interface CreateReviewDto {
   title?: string;
   body: string;
   buyerName: string;
-  buyerEmail?: string;
+  buyerEmail: string;
 }
 
 @Injectable()
@@ -54,13 +54,27 @@ export class ReviewsService {
     });
     if (!item) throw new NotFoundException("Item not found");
 
-    if (dto.buyerEmail) {
-      const prior = await this.db.review.findFirst({
-        where: { itemId: item.id, buyerEmail: dto.buyerEmail },
-        select: { id: true },
-      });
-      if (prior) throw new BadRequestException("You have already reviewed this item");
+    // Only verified buyers can review: require a paid order for this email
+    // that contains the item.
+    const purchase = await this.db.order.findFirst({
+      where: {
+        paymentStatus: "PAID",
+        OR: [{ email: dto.buyerEmail }, { guestEmail: dto.buyerEmail }],
+        orderItems: { some: { itemId: item.id } },
+      },
+      select: { id: true },
+    });
+    if (!purchase) {
+      throw new BadRequestException(
+        "Only verified buyers can leave a review. Use the email address from your order.",
+      );
     }
+
+    const prior = await this.db.review.findFirst({
+      where: { itemId: item.id, buyerEmail: dto.buyerEmail },
+      select: { id: true },
+    });
+    if (prior) throw new BadRequestException("You have already reviewed this item");
 
     return this.db.review.create({
       data: {
@@ -70,6 +84,7 @@ export class ReviewsService {
         body: dto.body,
         buyerName: dto.buyerName,
         buyerEmail: dto.buyerEmail,
+        verified: true,
       },
       select: {
         id: true,

@@ -54,7 +54,7 @@ export default function NewSubmissionPage() {
     setError(null);
     try {
       const submission = await api.post<{ id: string }>("/submissions", data);
-      router.push(`/submissions/${(submission as any).id ?? (submission as any).data?.id}?submitted=1`);
+      router.push(`/submissions/${submission.id}?submitted=1`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Submission failed. Please try again.");
     }

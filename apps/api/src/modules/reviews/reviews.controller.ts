@@ -10,7 +10,7 @@ const CreateReviewSchema = z.object({
   title: z.string().max(120).optional(),
   body: z.string().min(10).max(1000),
   buyerName: z.string().min(2).max(80),
-  buyerEmail: z.string().email().optional(),
+  buyerEmail: z.string().email(),
 });
 
 type CreateReviewDto = z.infer<typeof CreateReviewSchema>;
@@ -27,9 +27,8 @@ export class ReviewsController {
     return { data: result };
   }
 
-  // Kept @Public so guest buyers (no account) can still review.
-  // TODO: once buyer auth is required, remove @Public, add @Roles("BUYER"),
-  // and verify the buyer has a completed order containing this item.
+  // @Public so guest buyers (no account) can review, but the service enforces
+  // that the buyerEmail has a paid order containing this item (verified purchase).
   @Public()
   @Post()
   @HttpCode(201)
