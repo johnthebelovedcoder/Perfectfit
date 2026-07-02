@@ -13,6 +13,7 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         include:
           - name: api
@@ -20,28 +21,28 @@ jobs:
             image: ghcr.io/johnthebelovedcoder/perfectfit-api
             package_slug: perfectfit-api
             app_dir: api
-            package_name: @thread/api
+            package_name: "@thread/api"
             port: 3001
           - name: storefront
             dockerfile: Dockerfile.next
             image: ghcr.io/johnthebelovedcoder/perfectfit-storefront
             package_slug: perfectfit-storefront
             app_dir: storefront
-            package_name: @thread/storefront
+            package_name: "@thread/storefront"
             port: 3000
           - name: seller
             dockerfile: Dockerfile.next
             image: ghcr.io/johnthebelovedcoder/perfectfit-seller
             package_slug: perfectfit-seller
             app_dir: seller
-            package_name: @thread/seller
+            package_name: "@thread/seller"
             port: 3002
           - name: admin
             dockerfile: Dockerfile.next
             image: ghcr.io/johnthebelovedcoder/perfectfit-admin
             package_slug: perfectfit-admin
             app_dir: admin
-            package_name: @thread/admin
+            package_name: "@thread/admin"
             port: 3003
 
     steps:
