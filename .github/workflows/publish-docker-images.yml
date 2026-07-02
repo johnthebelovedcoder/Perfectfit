@@ -1,0 +1,71 @@
+name: Publish Docker images
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - name: api
+            dockerfile: Dockerfile.api
+            image: ghcr.io/johnthebelovedcoder/perfectfit-api
+            app_dir: api
+            package_name: @thread/api
+            port: 3001
+          - name: storefront
+            dockerfile: Dockerfile.next
+            image: ghcr.io/johnthebelovedcoder/perfectfit-storefront
+            app_dir: storefront
+            package_name: @thread/storefront
+            port: 3000
+          - name: seller
+            dockerfile: Dockerfile.next
+            image: ghcr.io/johnthebelovedcoder/perfectfit-seller
+            app_dir: seller
+            package_name: @thread/seller
+            port: 3002
+          - name: admin
+            dockerfile: Dockerfile.next
+            image: ghcr.io/johnthebelovedcoder/perfectfit-admin
+            app_dir: admin
+            package_name: @thread/admin
+            port: 3003
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          push: true
+          tags: |
+            ${{ matrix.image }}:latest
+            ${{ matrix.image }}:${{ github.sha }}
+          build-args: |
+            PACKAGE_NAME=${{ matrix.package_name }}
+            APP_DIR=${{ matrix.app_dir }}
+            PORT=${{ matrix.port }}
+            NEXT_PUBLIC_API_URL=http://api:3001
+            NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=dbzbeaxfm

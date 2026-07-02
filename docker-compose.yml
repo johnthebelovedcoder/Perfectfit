@@ -17,9 +17,8 @@ services:
       - "6379:6379"
 
   api:
-    build:
-      context: .
-      dockerfile: Dockerfile.api
+    image: ghcr.io/johnthebelovedcoder/perfectfit-api:latest
+    pull_policy: always
     depends_on:
       - postgres
       - redis
@@ -49,15 +48,8 @@ services:
     command: sh -c "until nc -z postgres 5432; do echo 'Waiting for postgres...'; sleep 1; done; pnpm --filter @thread/database exec prisma db push && node dist/main"
 
   storefront:
-    build:
-      context: .
-      dockerfile: Dockerfile.next
-      args:
-        APP_DIR: storefront
-        PACKAGE_NAME: "@thread/storefront"
-        PORT: 3000
-        NEXT_PUBLIC_API_URL: http://api:3001
-        NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME: replace-me
+    image: ghcr.io/johnthebelovedcoder/perfectfit-storefront:latest
+    pull_policy: always
     depends_on:
       - api
     ports:
@@ -70,15 +62,8 @@ services:
       NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME: dbzbeaxfm
 
   seller:
-    build:
-      context: .
-      dockerfile: Dockerfile.next
-      args:
-        APP_DIR: seller
-        PACKAGE_NAME: "@thread/seller"
-        PORT: 3002
-        NEXT_PUBLIC_API_URL: http://api:3001
-        NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME: replace-me
+    image: ghcr.io/johnthebelovedcoder/perfectfit-seller:latest
+    pull_policy: always
     depends_on:
       - api
     ports:
@@ -91,15 +76,8 @@ services:
       NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME: dbzbeaxfm
 
   admin:
-    build:
-      context: .
-      dockerfile: Dockerfile.next
-      args:
-        APP_DIR: admin
-        PACKAGE_NAME: "@thread/admin"
-        PORT: 3003
-        NEXT_PUBLIC_API_URL: http://api:3001
-        NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME: replace-me
+    image: ghcr.io/johnthebelovedcoder/perfectfit-admin:latest
+    pull_policy: always
     depends_on:
       - api
     ports:
