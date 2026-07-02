@@ -35,11 +35,11 @@ services:
       FIELD_ENCRYPTION_KEY: 3d42fd980abd448ce4c758de435514019ba1658499f7c155f4f3b28937d2b301
       JWT_REFRESH_SECRET: "sn/EZvCcuEFqY8KtAcDsOsWtqxDLiHiRTX0jrhB2e9Q="
       JWT_SECRET: "zJ6AgBCDn8Kb/ZaP0SzBuaLce48AeuLRkz34xw3HZoM="
-      NEXT_PUBLIC_ADMIN_URL: https://perfectfit-admin.onrender.com
-      NEXT_PUBLIC_SELLER_URL: https://perfectfit-seller.onrender.com
-      NEXT_PUBLIC_STOREFRONT_URL: https://perfectfit-storefront.onrender.com
+      NEXT_PUBLIC_ADMIN_URL: ${NEXT_PUBLIC_ADMIN_URL:-http://localhost:3003}
+      NEXT_PUBLIC_SELLER_URL: ${NEXT_PUBLIC_SELLER_URL:-http://localhost:3002}
+      NEXT_PUBLIC_STOREFRONT_URL: ${NEXT_PUBLIC_STOREFRONT_URL:-http://localhost:3000}
       NODE_ENV: production
-      REDIS_URL: redis://red-d8sfg177f7vs73cso84g:6379
+      REDIS_URL: redis://redis:6379
       RESEND_API_KEY: re_Gjoyemh5_Ng4NgxpNjmZtTHMfDseqBnC3
       STRIPE_SECRET_KEY: sk_test_51TlACQ…00vDcOZ1vu
       STRIPE_WEBHOOK_SECRET: whsec_dummy
@@ -58,7 +58,7 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3000
-      NEXT_PUBLIC_API_URL: https://perfectfit-api-hive.onrender.com
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3001}
       NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME: dbzbeaxfm
 
   seller:
@@ -72,7 +72,7 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3002
-      NEXT_PUBLIC_API_URL: https://perfectfit-api-hive.onrender.com
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3001}
       NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME: dbzbeaxfm
 
   admin:
@@ -86,7 +86,7 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3003
-      NEXT_PUBLIC_API_URL: https://perfectfit-api-hive.onrender.com
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3001}
       NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME: dbzbeaxfm
 
 volumes:
