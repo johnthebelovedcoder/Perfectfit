@@ -1,0 +1,26 @@
+# API production image for a pnpm monorepo
+FROM node:20-alpine3.18 AS deps
+WORKDIR /app
+RUN corepack enable && corepack prepare pnpm@10.33.0 --activate
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY packages packages
+COPY apps apps
+RUN pnpm install --frozen-lockfile
+
+FROM deps AS build
+WORKDIR /app
+RUN pnpm --filter @thread/database exec prisma generate
+RUN pnpm exec turbo run build --filter=@thread/api...
+
+FROM node:20-alpine3.18 AS runtime
+WORKDIR /app
+RUN corepack enable && corepack prepare pnpm@10.33.0 --activate
+COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /app/apps/api/dist ./apps/api/dist
+COPY --from=build /app/apps/api/package.json ./apps/api/package.json
+COPY --from=build /app/apps/api/prisma ./apps/api/prisma
+COPY --from=build /app/packages ./packages
+COPY --from=build /app/package.json ./package.json
+EXPOSE 3001
+WORKDIR /app/apps/api
+CMD ["node", "dist/main"]

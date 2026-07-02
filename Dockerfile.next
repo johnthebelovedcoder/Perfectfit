@@ -1,0 +1,36 @@
+# Generic Next.js production image for apps in the monorepo
+FROM node:20-alpine3.18 AS deps
+WORKDIR /app
+RUN corepack enable && corepack prepare pnpm@10.33.0 --activate
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY packages packages
+COPY apps apps
+RUN pnpm install --frozen-lockfile
+
+ARG PACKAGE_NAME=@thread/storefront
+ARG NEXT_PUBLIC_API_URL=http://api:3001
+ARG NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=replace-me
+FROM deps AS build
+WORKDIR /app
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+ENV NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=${NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}
+RUN pnpm exec turbo run build --filter=${PACKAGE_NAME}...
+
+ARG APP_DIR=storefront
+FROM node:20-alpine3.18 AS runtime
+WORKDIR /app
+RUN corepack enable && corepack prepare pnpm@10.33.0 --activate
+ARG NEXT_PUBLIC_API_URL=http://api:3001
+ARG NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=replace-me
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+ENV NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=${NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}
+COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /app/apps/${APP_DIR}/.next ./apps/${APP_DIR}/.next
+COPY --from=build /app/apps/${APP_DIR}/public ./apps/${APP_DIR}/public
+COPY --from=build /app/apps/${APP_DIR}/package.json ./apps/${APP_DIR}/package.json
+COPY --from=build /app/packages ./packages
+COPY --from=build /app/package.json ./package.json
+WORKDIR /app/apps/${APP_DIR}
+EXPOSE 3000
+ENV PORT=3000
+CMD ["sh", "-c", "node_modules/.bin/next start -p ${PORT}"]
