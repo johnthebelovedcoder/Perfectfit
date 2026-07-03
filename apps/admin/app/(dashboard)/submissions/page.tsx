@@ -7,6 +7,7 @@ import Image from "next/image";
 import { Search } from "lucide-react";
 import { api } from "@/lib/api";
 import { getCloudinaryUrl, formatPrice } from "@thread/utils";
+import { QueryError } from "@/components/shared/QueryError";
 
 interface Submission {
   id: string;
@@ -57,7 +58,7 @@ export default function SubmissionsPage() {
   const [tab, setTab] = useState<typeof TABS[number]>("All");
   const [search, setSearch] = useState("");
 
-  const { data } = useQuery({
+  const { data, isError, refetch } = useQuery({
     queryKey: ["admin-all-submissions"],
     queryFn: () => api.get<Submission[]>("/submissions/queue?status=ALL&limit=100"),
     refetchInterval: 30_000,
@@ -77,6 +78,7 @@ export default function SubmissionsPage() {
 
   return (
     <div className="p-8 space-y-6">
+      {isError && <QueryError onRetry={() => void refetch()} />}
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Submissions</h1>
         <p className="text-gray-500 text-sm mt-1">Review and manage seller submissions</p>

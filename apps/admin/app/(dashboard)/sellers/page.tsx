@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Search, CheckCircle, AlertTriangle, LayoutList, LayoutGrid } from "lucide-react";
 import { api } from "@/lib/api";
 import { formatPrice } from "@thread/utils";
+import { QueryError } from "@/components/shared/QueryError";
 
 interface SellerStats {
   submitted: number;
@@ -31,7 +32,7 @@ export default function SellersPage() {
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
 
-  const { data } = useQuery({
+  const { data, isError, refetch } = useQuery({
     queryKey: ["admin-sellers"],
     queryFn: () => api.get<Seller[]>("/sellers"),
   });
@@ -62,6 +63,7 @@ export default function SellersPage() {
 
   return (
     <div className="p-8 space-y-6">
+      {isError && <QueryError onRetry={() => void refetch()} />}
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Sellers</h1>
         <p className="text-gray-500 text-sm mt-1">View and manage registered sellers</p>

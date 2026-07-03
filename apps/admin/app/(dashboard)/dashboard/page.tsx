@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Package, Inbox, ShoppingBag, TrendingUp, DollarSign, Users } from "lucide-react";
 import { api } from "@/lib/api";
 import { formatPrice } from "@thread/utils";
+import { QueryError } from "@/components/shared/QueryError";
 
 interface Stats {
   liveItems: number;
@@ -60,7 +61,7 @@ function timeAgo(dateStr: string) {
 }
 
 export default function AdminDashboard() {
-  const { data: stats } = useQuery({ queryKey: ["admin-stats"], queryFn: () => api.get<Stats>("/admin/stats") });
+  const { data: stats, isError, refetch } = useQuery({ queryKey: ["admin-stats"], queryFn: () => api.get<Stats>("/admin/stats") });
   const { data: ordersData } = useQuery({ queryKey: ["admin-recent-orders"], queryFn: () => api.get<RecentOrder[]>("/orders?limit=4") });
   const { data: subsData } = useQuery({ queryKey: ["admin-pending-subs"], queryFn: () => api.get<PendingSub[]>("/submissions/queue?status=PENDING_REVIEW") });
 
@@ -78,6 +79,7 @@ export default function AdminDashboard() {
 
   return (
     <div className="p-8 space-y-8">
+      {isError && <QueryError onRetry={() => void refetch()} />}
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
         <p className="text-gray-500 mt-1">Welcome back. Here&apos;s what&apos;s <span className="text-emerald-600">happening today</span>.</p>

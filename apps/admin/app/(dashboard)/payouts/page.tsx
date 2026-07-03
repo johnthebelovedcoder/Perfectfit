@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Search, LayoutList, LayoutGrid } from "lucide-react";
 import { api } from "@/lib/api";
 import { formatPrice } from "@thread/utils";
+import { QueryError } from "@/components/shared/QueryError";
 
 interface Payout {
   id: string;
@@ -28,7 +29,7 @@ export default function PayoutsPage() {
   const [mutationError, setMutationError] = useState<string | null>(null);
   const [view, setView] = useState<"list" | "grid">("list");
 
-  const { data } = useQuery({
+  const { data, isError, refetch } = useQuery({
     queryKey: ["admin-payouts"],
     queryFn: () => api.get<Payout[]>("/payouts"),
   });
@@ -56,6 +57,7 @@ export default function PayoutsPage() {
 
   return (
     <div className="p-8 space-y-6">
+      {isError && <QueryError onRetry={() => void refetch()} />}
       {mutationError && (
         <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700">
           {mutationError}

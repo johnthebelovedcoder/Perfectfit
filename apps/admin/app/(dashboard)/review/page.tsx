@@ -7,6 +7,7 @@ import { Check, X, HelpCircle } from "lucide-react";
 import { Button, Badge, Input, Label, Textarea, Select, Skeleton } from "@thread/ui";
 import { api } from "@/lib/api";
 import { formatPrice, getCloudinaryUrl } from "@thread/utils";
+import { QueryError } from "@/components/shared/QueryError";
 
 interface Submission {
   id: string;
@@ -32,7 +33,7 @@ export default function ReviewQueuePage() {
   const [form, setForm] = useState({ retailPrice: "", agreedPayoutPrice: "", rejectionReason: "ITEM_CONDITION_BELOW_STANDARD", rejectionNote: "", moreInfoRequest: "", adminNote: "" });
   const [mutationError, setMutationError] = useState<string | null>(null);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["review-queue"],
     queryFn: () => api.get<Submission[]>("/submissions/queue"),
     refetchInterval: 30_000,
@@ -78,6 +79,7 @@ export default function ReviewQueuePage() {
 
   return (
     <div className="space-y-6">
+      {isError && <QueryError onRetry={() => void refetch()} />}
       {mutationError && (
         <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700">
           {mutationError}

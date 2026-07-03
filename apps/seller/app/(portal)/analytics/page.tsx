@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { DollarSign, TrendingUp, Wallet, Package, Percent, CheckCircle, Clock, Tag } from "lucide-react";
 import { api } from "@/lib/api";
 import { formatPrice } from "@thread/utils";
+import { QueryError } from "@/components/shared/QueryError";
 
 interface SellerAnalytics {
   range: { from: string; to: string; granularity: "day" | "week" | "month" };
@@ -68,7 +69,7 @@ export default function SellerAnalyticsPage() {
   const range = useMemo(() => resolveRange(preset, cFrom, cTo), [preset, cFrom, cTo]);
   const usingCustom = !!(cFrom && cTo);
 
-  const { data, isLoading, isFetching } = useQuery({
+  const { data, isLoading, isFetching, isError, refetch } = useQuery({
     queryKey: ["seller-analytics", range.from, range.to],
     queryFn: () => api.get<SellerAnalytics>(`/sellers/me/analytics?from=${encodeURIComponent(range.from)}&to=${encodeURIComponent(range.to)}`),
     refetchInterval: 60_000,
@@ -77,6 +78,7 @@ export default function SellerAnalyticsPage() {
 
   return (
     <div className="p-8 space-y-7">
+      {isError && <QueryError onRetry={() => void refetch()} />}
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Analytics</h1>
         <p className="text-gray-400 text-sm mt-0.5">Your sales and earnings · {isFetching ? "updating…" : "updates every minute"}</p>

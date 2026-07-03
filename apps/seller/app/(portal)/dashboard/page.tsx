@@ -11,6 +11,7 @@ import {
 import { api } from "@/lib/api";
 import { getCloudinaryUrl, formatPrice } from "@thread/utils";
 import type { SubmissionSummary } from "@thread/types";
+import { QueryError } from "@/components/shared/QueryError";
 
 const STATUS_STYLE: Record<string, string> = {
   PENDING_REVIEW: "text-amber-600 bg-amber-50 border-amber-200",
@@ -57,7 +58,7 @@ export default function DashboardPage() {
     staleTime: 5 * 60 * 1000,
   });
 
-  const { data: rawSubs, isLoading: subsLoading } = useQuery({
+  const { data: rawSubs, isLoading: subsLoading, isError: subsError, refetch: refetchSubs } = useQuery({
     queryKey: ["my-submissions"],
     queryFn: () => api.get<SubmissionSummary[]>("/submissions/mine"),
   });
@@ -86,6 +87,7 @@ export default function DashboardPage() {
 
   return (
     <div className="p-8 space-y-7">
+      {subsError && <QueryError onRetry={() => void refetchSubs()} />}
       {/* Verification warning */}
       {!isVerified && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">

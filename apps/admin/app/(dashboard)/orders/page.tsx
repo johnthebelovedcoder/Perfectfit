@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Search, LayoutList, LayoutGrid } from "lucide-react";
 import { api } from "@/lib/api";
 import { formatPrice } from "@thread/utils";
+import { QueryError } from "@/components/shared/QueryError";
 
 interface Order {
   id: string;
@@ -66,7 +67,7 @@ export default function OrdersPage() {
   const [mutationError, setMutationError] = useState<string | null>(null);
   const [view, setView] = useState<"list" | "grid">("list");
 
-  const { data } = useQuery({
+  const { data, isError, refetch } = useQuery({
     queryKey: ["admin-orders"],
     queryFn: () => api.get<Order[]>("/orders?limit=500"),
     refetchInterval: 30_000,
@@ -109,6 +110,7 @@ export default function OrdersPage() {
 
   return (
     <div className="p-8 space-y-6">
+      {isError && <QueryError onRetry={() => void refetch()} />}
       {mutationError && (
         <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700">
           {mutationError}

@@ -11,6 +11,7 @@ import { Footer } from "@/components/shared/Footer";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { formatPrice, getCloudinaryUrl } from "@thread/utils";
+import { QueryError } from "@/components/shared/QueryError";
 
 interface OrderRow {
   id: string;
@@ -48,7 +49,7 @@ export default function AccountOrdersPage() {
   }, [auth, checked, router]);
   useEffect(() => { const t = setTimeout(() => setChecked(true), 50); return () => clearTimeout(t); }, []);
 
-  const { data: orders, isLoading } = useQuery({
+  const { data: orders, isLoading, isError, refetch } = useQuery({
     queryKey: ["my-orders"],
     queryFn: () => api.get<OrderRow[]>("/orders/mine"),
     enabled: !!auth,
@@ -66,6 +67,8 @@ export default function AccountOrdersPage() {
             <div className="space-y-3">
               {Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-28 bg-white rounded-2xl border border-gray-100 animate-pulse" />)}
             </div>
+          ) : isError ? (
+            <QueryError onRetry={() => void refetch()} />
           ) : !orders || orders.length === 0 ? (
             <div className="bg-white rounded-2xl border border-dashed border-gray-200 py-16 text-center">
               <Package className="h-8 w-8 text-gray-300 mx-auto mb-3" />

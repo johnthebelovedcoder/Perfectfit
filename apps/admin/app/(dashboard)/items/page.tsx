@@ -8,6 +8,7 @@ import { api } from "@/lib/api";
 import { getCloudinaryUrl, formatPrice } from "@thread/utils";
 import { CATEGORY_VALUES, categoryLabel } from "@thread/types";
 import { PhotoUpload } from "@/components/shared/PhotoUpload";
+import { QueryError } from "@/components/shared/QueryError";
 
 interface AdminItem {
   id: string;
@@ -43,7 +44,7 @@ export default function CataloguePage() {
   const [catFilter, setCatFilter] = useState("All");
   const [statusFilter, setStatusFilter] = useState<"all" | "live" | "draft" | "sold">("all");
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["admin-items-all"],
     queryFn: () => api.get<AdminItem[]>("/items/admin-catalogue?limit=200"),
     refetchInterval: 30_000,
@@ -101,6 +102,7 @@ export default function CataloguePage() {
   return (
     <>
     <div className="p-8 space-y-6">
+      {isError && <QueryError onRetry={() => void refetch()} />}
       {mutationError && (
         <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700">
           {mutationError}

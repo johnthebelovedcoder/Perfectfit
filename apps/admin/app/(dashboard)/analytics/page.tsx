@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { formatPrice } from "@thread/utils";
+import { QueryError } from "@/components/shared/QueryError";
 
 interface Analytics {
   range: { from: string; to: string; granularity: "day" | "week" | "month" };
@@ -88,7 +89,7 @@ export default function AnalyticsPage() {
 
   const range = useMemo(() => resolveRange(preset, customFrom, customTo), [preset, customFrom, customTo]);
 
-  const { data, isLoading, isFetching } = useQuery({
+  const { data, isLoading, isFetching, isError, refetch } = useQuery({
     queryKey: ["admin-analytics", range.from, range.to],
     queryFn: () => api.get<Analytics>(`/admin/analytics?from=${encodeURIComponent(range.from)}&to=${encodeURIComponent(range.to)}`),
     refetchInterval: 60_000,
@@ -99,6 +100,7 @@ export default function AnalyticsPage() {
 
   return (
     <div className="p-8 space-y-8">
+      {isError && <QueryError onRetry={() => void refetch()} />}
       <div className="flex items-start justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Analytics</h1>

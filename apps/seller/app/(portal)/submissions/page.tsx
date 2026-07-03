@@ -7,6 +7,7 @@ import { PlusCircle, Package } from "lucide-react";
 import { api } from "@/lib/api";
 import { getCloudinaryUrl, formatPrice } from "@thread/utils";
 import type { SubmissionSummary } from "@thread/types";
+import { QueryError } from "@/components/shared/QueryError";
 
 const STATUS_STYLE: Record<string, string> = {
   PENDING_REVIEW:         "text-amber-700 bg-amber-50 border-amber-200",
@@ -37,7 +38,7 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 export default function SubmissionsPage() {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["my-submissions"],
     queryFn: () => api.get<SubmissionSummary[]>("/submissions/mine"),
   });
@@ -46,6 +47,7 @@ export default function SubmissionsPage() {
 
   return (
     <div className="p-8 space-y-6">
+      {isError && <QueryError onRetry={() => void refetch()} />}
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">My Submissions</h1>
