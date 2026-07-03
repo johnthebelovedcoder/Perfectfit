@@ -1,7 +1,9 @@
 # Generic Next.js production image for apps in the monorepo
 FROM node:20-alpine3.18 AS deps
 WORKDIR /app
-RUN corepack enable && corepack prepare pnpm@10.33.0 --activate
+# Install pnpm via npm — corepack on this base image ships outdated signing
+# keys and fails with "Cannot find matching keyid".
+RUN npm install -g pnpm@10.33.0
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY packages packages
 COPY apps apps
@@ -18,10 +20,10 @@ ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 ENV NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=${NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}
 RUN pnpm exec turbo run build --filter=${PACKAGE_NAME}...
 
-ARG APP_DIR=storefront
 FROM node:20-alpine3.18 AS runtime
 WORKDIR /app
-RUN corepack enable && corepack prepare pnpm@10.33.0 --activate
+# Runtime runs `next start` directly (node_modules copied below) — no pnpm needed.
+ARG APP_DIR=storefront
 ARG NEXT_PUBLIC_API_URL=http://api:3001
 ARG NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=replace-me
 ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
