@@ -30,6 +30,22 @@ services:
     image: redis:7-alpine
     restart: unless-stopped
 
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - storefront
+      - seller
+      - admin
+      - api
+
   api:
     image: ghcr.io/johnthebelovedcoder/perfectfit-api:latest
     pull_policy: always
@@ -38,8 +54,6 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
-    ports:
-      - "3001:3001"
     restart: unless-stopped
     environment:
       NODE_ENV: production
@@ -69,8 +83,6 @@ services:
     pull_policy: always
     depends_on:
       - api
-    ports:
-      - "3000:3000"
     restart: unless-stopped
     environment:
       NODE_ENV: production
@@ -81,8 +93,6 @@ services:
     pull_policy: always
     depends_on:
       - api
-    ports:
-      - "3002:3002"
     restart: unless-stopped
     environment:
       NODE_ENV: production
@@ -93,8 +103,6 @@ services:
     pull_policy: always
     depends_on:
       - api
-    ports:
-      - "3003:3003"
     restart: unless-stopped
     environment:
       NODE_ENV: production
@@ -102,3 +110,5 @@ services:
 
 volumes:
   postgres-data:
+  caddy-data:
+  caddy-config:

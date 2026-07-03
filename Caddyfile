@@ -1,0 +1,23 @@
+# Reverse proxy + automatic HTTPS (Let's Encrypt) for all Perfect Fit services.
+# Caddy provisions certs on first run — requires ports 80/443 open and DNS for
+# each name pointing at this server.
+
+perfectfithq.com, www.perfectfithq.com {
+	encode zstd gzip
+	reverse_proxy storefront:3000
+}
+
+seller.perfectfithq.com {
+	encode zstd gzip
+	reverse_proxy seller:3002
+}
+
+admin.perfectfithq.com {
+	encode zstd gzip
+	reverse_proxy admin:3003
+}
+
+api.perfectfithq.com {
+	encode zstd gzip
+	reverse_proxy api:3001
+}
