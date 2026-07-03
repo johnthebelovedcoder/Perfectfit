@@ -17,6 +17,10 @@ const withPWA = require("@ducanh2912/next-pwa").default({
 
 const nextConfig = {
   images: {
+    // Self-hosted: the on-demand /_next/image optimizer is unreliable in the
+    // container, so serve images straight from the source CDN (Unsplash/Cloudinary
+    // already deliver optimized, sized images).
+    unoptimized: true,
     remotePatterns: [
       {
         protocol: "https",

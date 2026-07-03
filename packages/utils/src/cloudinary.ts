@@ -9,11 +9,13 @@ export function getCloudinaryUrl(
     format?: "auto" | "webp" | "jpg";
   } = {}
 ): string {
-  // Pass through direct URLs (Unsplash, etc.)
-  // Strip any pre-baked sizing query params so Next.js image optimization
-  // can apply its own params without conflicting query strings causing 404s.
+  // Pass through direct URLs (Unsplash, etc.). Image optimization is disabled in
+  // production (self-hosted), so re-apply sizing params on the source URL — most
+  // CDNs (Unsplash included) honor w/q/auto so images stay small.
   if (publicId.startsWith("http://") || publicId.startsWith("https://")) {
-    return publicId.split("?")[0] as string;
+    const base = publicId.split("?")[0] as string;
+    const { width, quality = 80 } = options;
+    return width ? `${base}?w=${width}&q=${quality}&auto=format&fit=crop` : base;
   }
 
   const { width, height, quality = 80, format = "auto" } = options;

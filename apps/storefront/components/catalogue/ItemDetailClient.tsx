@@ -181,6 +181,24 @@ export function ItemDetailClient({ item, similar, reviews, reviewStats }: Props)
                 </span>
               </div>
 
+              {/* Actions — kept high so the primary CTA is above the fold */}
+              <div className="flex gap-3">
+                <div className="flex-1">
+                  <AddToCartButton item={item} />
+                </div>
+                <button
+                  onClick={() => toggleWishlist(item)}
+                  className={`w-12 h-12 rounded-xl border flex items-center justify-center transition-all ${
+                    wishlisted
+                      ? "border-rose-300 bg-rose-50 text-rose-500"
+                      : "border-gray-200 text-gray-400 hover:text-rose-500 hover:border-rose-200"
+                  }`}
+                  aria-label={wishlisted ? "Remove from wishlist" : "Add to wishlist"}
+                >
+                  <Heart className={`h-5 w-5 ${wishlisted ? "fill-rose-500" : ""}`} />
+                </button>
+              </div>
+
               {/* Metadata table */}
               <div className="border border-gray-100 rounded-xl overflow-hidden">
                 {[
@@ -209,24 +227,6 @@ export function ItemDetailClient({ item, similar, reviews, reviewStats }: Props)
               <div>
                 <p className="text-sm font-semibold text-gray-700 mb-1.5">Description</p>
                 <p className="text-sm text-gray-500 leading-relaxed">{item.description}</p>
-              </div>
-
-              {/* Actions */}
-              <div className="flex gap-3">
-                <div className="flex-1">
-                  <AddToCartButton item={item} />
-                </div>
-                <button
-                  onClick={() => toggleWishlist(item)}
-                  className={`w-12 h-12 rounded-xl border flex items-center justify-center transition-all ${
-                    wishlisted
-                      ? "border-rose-300 bg-rose-50 text-rose-500"
-                      : "border-gray-200 text-gray-400 hover:text-rose-500 hover:border-rose-200"
-                  }`}
-                  aria-label={wishlisted ? "Remove from wishlist" : "Add to wishlist"}
-                >
-                  <Heart className={`h-5 w-5 ${wishlisted ? "fill-rose-500" : ""}`} />
-                </button>
               </div>
 
               {/* Trust badges */}

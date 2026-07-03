@@ -112,16 +112,16 @@ export function HeroSlider() {
           <p className="mt-4 text-gray-200 text-base sm:text-lg max-w-sm">
             {slide.sub}
           </p>
-          <div className="mt-8 flex items-center gap-4">
+          <div className="mt-8 flex flex-col sm:flex-row sm:items-center gap-3">
             <Link
               href={slide.href}
-              className="bg-white text-gray-900 font-semibold px-7 py-3.5 rounded-xl text-sm hover:bg-gray-100 transition-colors"
+              className="inline-flex items-center justify-center gap-2 w-full sm:w-auto bg-white text-gray-900 font-semibold px-7 py-3.5 rounded-xl text-sm hover:bg-gray-100 shadow-lg shadow-black/10 transition-colors"
             >
-              {slide.cta} →
+              {slide.cta} <span aria-hidden="true">→</span>
             </Link>
             <Link
               href={`${process.env["NEXT_PUBLIC_SELLER_URL"] ?? "http://localhost:3002"}`}
-              className="border border-white/40 text-white font-semibold px-6 py-3.5 rounded-xl text-sm hover:bg-white/10 transition-colors"
+              className="inline-flex items-center justify-center w-full sm:w-auto border border-white/50 text-white font-semibold px-6 py-3.5 rounded-xl text-sm hover:bg-white/10 backdrop-blur-sm transition-colors"
             >
               Sell with Perfect Fit
             </Link>
