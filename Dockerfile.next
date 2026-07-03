@@ -7,11 +7,13 @@ COPY packages packages
 COPY apps apps
 RUN pnpm install --frozen-lockfile
 
+FROM deps AS build
+WORKDIR /app
+# ARGs must be (re)declared inside the stage that uses them, otherwise they are
+# empty here and NEXT_PUBLIC_* get baked into the client bundle as blank strings.
 ARG PACKAGE_NAME=@thread/storefront
 ARG NEXT_PUBLIC_API_URL=http://api:3001
 ARG NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=replace-me
-FROM deps AS build
-WORKDIR /app
 ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 ENV NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=${NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}
 RUN pnpm exec turbo run build --filter=${PACKAGE_NAME}...

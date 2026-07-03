@@ -68,18 +68,26 @@ jobs:
           tags: |
             ${{ matrix.image }}:latest
             ${{ matrix.image }}:${{ github.sha }}
+          # NEXT_PUBLIC_* are inlined into the browser bundle at BUILD time, so
+          # NEXT_PUBLIC_API_URL must be the PUBLIC API URL the browser can reach
+          # (NOT the internal http://api:3001). Set repo variables under
+          # Settings → Secrets and variables → Actions → Variables.
           build-args: |
             PACKAGE_NAME=${{ matrix.package_name }}
             APP_DIR=${{ matrix.app_dir }}
             PORT=${{ matrix.port }}
-            NEXT_PUBLIC_API_URL=http://api:3001
-            NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=dbzbeaxfm
+            NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL || 'http://localhost:3001' }}
+            NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=${{ vars.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'dbzbeaxfm' }}
 
-      - name: Make package public
+      # Best-effort: the default GITHUB_TOKEN often can't change package
+      # visibility (returns 403). Don't fail the run over it — set the package
+      # to public once in the GitHub UI (Packages → package → Settings) instead.
+      - name: Make package public (best-effort)
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh api --method PATCH \
             -H "Accept: application/vnd.github+json" \
             /user/packages/container/${{ matrix.package_slug }} \
-            -f visibility=public
+            -f visibility=public || echo "Could not set visibility; set it manually in the GitHub UI."

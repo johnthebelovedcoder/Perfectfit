@@ -1,6 +1,8 @@
 # API production image for a pnpm monorepo
 FROM node:20-alpine3.18 AS deps
 WORKDIR /app
+# openssl + libc6-compat are required by the Prisma query engine on Alpine (musl)
+RUN apk add --no-cache openssl libc6-compat
 RUN corepack enable && corepack prepare pnpm@10.33.0 --activate
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY packages packages
@@ -14,11 +16,14 @@ RUN pnpm exec turbo run build --filter=@thread/api...
 
 FROM node:20-alpine3.18 AS runtime
 WORKDIR /app
+# openssl + libc6-compat are required by the Prisma query engine on Alpine (musl)
+RUN apk add --no-cache openssl libc6-compat
 RUN corepack enable && corepack prepare pnpm@10.33.0 --activate
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/apps/api/dist ./apps/api/dist
 COPY --from=build /app/apps/api/package.json ./apps/api/package.json
-COPY --from=build /app/apps/api/prisma ./apps/api/prisma
+# Prisma schema lives in packages/database/prisma (copied below via /packages),
+# so `prisma db push` / generate resolve it there — no apps/api/prisma exists.
 COPY --from=build /app/packages ./packages
 COPY --from=build /app/package.json ./package.json
 EXPOSE 3001
