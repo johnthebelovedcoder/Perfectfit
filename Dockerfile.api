@@ -26,6 +26,12 @@ RUN npm install -g pnpm@10.33.0
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/apps/api/dist ./apps/api/dist
 COPY --from=build /app/apps/api/package.json ./apps/api/package.json
+# App-level node_modules holds the API's runtime deps (reflect-metadata, nest…)
+# via pnpm symlinks; without it node exits with MODULE_NOT_FOUND.
+COPY --from=build /app/apps/api/node_modules ./apps/api/node_modules
+# pnpm-workspace.yaml lets `pnpm --filter @thread/database` resolve at runtime
+# (needed for `prisma db push`), otherwise "No projects matched the filters".
+COPY --from=build /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
 # Prisma schema lives in packages/database/prisma (copied below via /packages),
 # so `prisma db push` / generate resolve it there — no apps/api/prisma exists.
 COPY --from=build /app/packages ./packages
