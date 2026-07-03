@@ -1,5 +1,3 @@
-version: "3.9"
-
 # All secrets/config come from a `.env` file placed next to this compose file on
 # the server (see .env.hostinger.example). Nothing sensitive is committed here.
 #
