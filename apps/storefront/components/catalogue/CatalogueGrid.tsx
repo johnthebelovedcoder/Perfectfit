@@ -4,6 +4,7 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { ItemCard } from "./ItemCard";
 import { Button, Skeleton } from "@thread/ui";
 import { api } from "@/lib/api";
+import { QueryError } from "@/components/shared/QueryError";
 import type { CatalogueItem, PaginationMeta } from "@thread/types";
 
 interface Props {
@@ -17,7 +18,7 @@ interface ItemsResponse {
 }
 
 export function CatalogueGrid({ category, search }: Props) {
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isError, refetch } =
     useInfiniteQuery({
       queryKey: ["items", { category, search }],
       queryFn: async ({ pageParam }) => {
@@ -48,6 +49,10 @@ export function CatalogueGrid({ category, search }: Props) {
         ))}
       </div>
     );
+  }
+
+  if (isError) {
+    return <QueryError onRetry={() => void refetch()} className="my-8" />;
   }
 
   const items = data?.pages.flatMap((page) => {

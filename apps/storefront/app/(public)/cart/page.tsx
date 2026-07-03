@@ -6,13 +6,11 @@ import { X, ShoppingBag } from "lucide-react";
 import { useCartStore } from "@/stores/cart.store";
 import { formatPrice, getCloudinaryUrl } from "@thread/utils";
 import { Header } from "@/components/shared/Header";
-
-const FREE_DELIVERY_THRESHOLD = 5000; // $50 in cents
+import { Footer } from "@/components/shared/Footer";
 
 export default function CartPage() {
   const { items, removeItem, totalKobo } = useCartStore();
   const subtotal = totalKobo();
-  const deliveryFree = subtotal >= FREE_DELIVERY_THRESHOLD;
 
   if (items.length === 0) {
     return (
@@ -29,6 +27,7 @@ export default function CartPage() {
             Continue Shopping
           </Link>
         </main>
+        <Footer />
       </>
     );
   }
@@ -91,17 +90,6 @@ export default function CartPage() {
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-4">
             <h2 className="text-lg font-bold text-gray-900">Order Summary</h2>
 
-            {/* Free delivery banner */}
-            {deliveryFree ? (
-              <div className="bg-emerald-50 border border-emerald-100 rounded-xl px-3 py-2.5 text-xs font-medium text-emerald-700">
-                🎉 You qualify for free delivery!
-              </div>
-            ) : (
-              <div className="bg-amber-50 border border-amber-100 rounded-xl px-3 py-2.5 text-xs text-amber-700">
-                Add {formatPrice(FREE_DELIVERY_THRESHOLD - subtotal)} more for free delivery
-              </div>
-            )}
-
             <div className="space-y-3 text-sm">
               <div className="flex items-center justify-between">
                 <span className="text-gray-400">Subtotal ({items.length} item{items.length !== 1 ? "s" : ""})</span>
@@ -109,10 +97,7 @@ export default function CartPage() {
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-gray-400">Delivery</span>
-                {deliveryFree
-                  ? <span className="font-medium text-emerald-600">Free</span>
-                  : <span className="text-gray-400 text-xs">Calculated at checkout</span>
-                }
+                <span className="text-gray-400 text-xs">Calculated at checkout</span>
               </div>
             </div>
 
@@ -132,6 +117,7 @@ export default function CartPage() {
           </div>
         </div>
       </main>
+      <Footer />
     </>
   );
 }

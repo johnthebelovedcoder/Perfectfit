@@ -8,6 +8,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { formatPrice, getCloudinaryUrl } from "@thread/utils";
 import type { CatalogueItem, PaginationMeta } from "@thread/types";
+import { QueryError } from "@/components/shared/QueryError";
 
 const API_URL = process.env["NEXT_PUBLIC_API_URL"] ?? "http://localhost:3001";
 
@@ -31,16 +32,16 @@ type ViewMode = "grid" | "list";
 
 const CONDITION_LABEL: Record<string, string> = {
   BRAND_NEW: "Brand New",
-  EXCELLENT: "Thrift",
-  GOOD: "Thrift",
-  FAIR: "Thrift",
+  EXCELLENT: "Excellent",
+  GOOD: "Good",
+  FAIR: "Fair",
 };
 
 export function CataloguePageClient({ category, condition, gender, sort: initialSort, search, categoryLabel, initialData }: Props) {
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [sort, setSort] = useState(initialSort ?? "newest");
 
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useInfiniteQuery({
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isError, refetch } = useInfiniteQuery({
     queryKey: ["items", { category, condition, gender, sort, search }],
     // Seed the first page from the server render so items show on first paint.
     // Only applies to the initial sort; changing sort triggers a fresh fetch.
@@ -140,6 +141,8 @@ export function CataloguePageClient({ category, condition, gender, sort: initial
             )
           ))}
         </div>
+      ) : isError ? (
+        <QueryError onRetry={() => void refetch()} className="my-8" />
       ) : items.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center">
           <p className="text-lg font-medium text-gray-700">No items found</p>

@@ -28,8 +28,6 @@ const US_STATES = [
   "Wisconsin","Wyoming","Washington DC",
 ];
 
-const FREE_THRESHOLD = 5000; // $50
-
 export default function CheckoutPage() {
   const router = useRouter();
   const { items, totalKobo } = useCartStore();
@@ -41,7 +39,6 @@ export default function CheckoutPage() {
   const [hydrated, setHydrated] = useState(false);
 
   const subtotal = totalKobo();
-  const isFreeShipping = subtotal >= FREE_THRESHOLD;
 
   const {
     register,
@@ -364,10 +361,7 @@ export default function CheckoutPage() {
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-400">Shipping</span>
-                    {isFreeShipping
-                      ? <span className="font-medium text-emerald-600">Free</span>
-                      : <span className="text-gray-400">Calculated at next step</span>
-                    }
+                    <span className="text-gray-400">Calculated at next step</span>
                   </div>
                   <div className="border-t border-gray-100 pt-3 flex justify-between">
                     <span className="font-bold text-gray-900">Total</span>

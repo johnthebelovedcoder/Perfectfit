@@ -22,9 +22,9 @@ const CONDITION_STYLE: Record<string, string> = {
 };
 const CONDITION_LABEL: Record<string, string> = {
   BRAND_NEW: "Brand New",
-  EXCELLENT: "Thrift",
-  GOOD:      "Thrift",
-  FAIR:      "Thrift",
+  EXCELLENT: "Excellent",
+  GOOD:      "Good",
+  FAIR:      "Fair",
 };
 
 interface ReviewData {

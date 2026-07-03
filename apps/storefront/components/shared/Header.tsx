@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { Search, Heart } from "lucide-react";
+import { Search, Heart, Menu, X } from "lucide-react";
 import { CartButton } from "./CartButton";
 import { SearchModal } from "./SearchModal";
 import { ProfileMenu } from "./ProfileMenu";
@@ -22,20 +22,32 @@ const NAV_LINKS = [
 
 export function Header() {
   const [searchOpen, setSearchOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const wishlistCount = useWishlistStore((s) => s.items.length);
 
   return (
     <>
       {/* Announcement bar */}
       <div className="bg-gray-900 text-white text-xs text-center py-2.5 px-4">
-        Free delivery on orders over $50 — Curated fashion, delivered to your door
+        Curated African fashion — every piece inspected & approved before it&apos;s listed
       </div>
 
       <header className="sticky top-0 z-50 w-full bg-white border-b border-gray-100">
         <div className="container mx-auto flex h-14 items-center justify-between px-4">
-          <Link href="/" className="text-xl font-bold tracking-tight">
-            Perfect Fit
-          </Link>
+          <div className="flex items-center gap-1">
+            {/* Mobile menu toggle */}
+            <button
+              onClick={() => setMenuOpen((v) => !v)}
+              className="md:hidden p-2 -ml-2 text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors"
+              aria-label={menuOpen ? "Close menu" : "Open menu"}
+              aria-expanded={menuOpen}
+            >
+              {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </button>
+            <Link href="/" className="text-xl font-bold tracking-tight">
+              Perfect Fit
+            </Link>
+          </div>
 
           <nav className="hidden md:flex items-center gap-1 text-sm">
             {NAV_LINKS.map(({ href, label }) => (
@@ -73,6 +85,24 @@ export function Header() {
             <CartButton />
           </div>
         </div>
+
+        {/* Mobile nav drawer */}
+        {menuOpen && (
+          <div className="md:hidden border-t border-gray-100 bg-white">
+            <nav className="container mx-auto px-4 py-2 flex flex-col">
+              {NAV_LINKS.map(({ href, label }) => (
+                <Link
+                  key={href}
+                  href={href}
+                  onClick={() => setMenuOpen(false)}
+                  className="py-3 text-sm font-medium text-gray-700 hover:text-gray-900 border-b border-gray-50 last:border-0"
+                >
+                  {label}
+                </Link>
+              ))}
+            </nav>
+          </div>
+        )}
       </header>
 
       <SearchModal open={searchOpen} onClose={() => setSearchOpen(false)} />

@@ -27,14 +27,14 @@ const CONDITION_STYLE: Record<string, string> = {
 };
 const CONDITION_LABEL: Record<string, string> = {
   BRAND_NEW: "Brand New",
-  EXCELLENT: "Thrift",
-  GOOD:      "Thrift",
-  FAIR:      "Thrift",
+  EXCELLENT: "Excellent",
+  GOOD:      "Good",
+  FAIR:      "Fair",
 };
 
 export function ItemCard({ item, priority = false }: ItemCardProps) {
   const photo = item.photos[0];
-  const imageUrl = photo ? getCloudinaryUrl(photo, { width: 400, height: 500 }) : "/placeholder.jpg";
+  const imageUrl = photo ? getCloudinaryUrl(photo, { width: 400, height: 500 }) : BLUR;
   const condStyle = CONDITION_STYLE[item.condition] ?? "bg-gray-100 text-gray-600";
   const condLabel = CONDITION_LABEL[item.condition] ?? item.condition;
 
@@ -96,8 +96,8 @@ export function ItemCard({ item, priority = false }: ItemCardProps) {
           <Heart className={`h-4 w-4 ${wishlisted ? "fill-white" : ""}`} />
         </button>
 
-        {/* Add to cart — bottom bar, slides up on hover */}
-        <div className="absolute bottom-0 inset-x-0 p-2 translate-y-full group-hover:translate-y-0 transition-transform duration-200 ease-out">
+        {/* Add to cart — always visible on touch, slides up on hover on desktop */}
+        <div className="absolute bottom-0 inset-x-0 p-2 translate-y-0 md:translate-y-full md:group-hover:translate-y-0 transition-transform duration-200 ease-out">
           <button
             onClick={handleAddToCart}
             className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold shadow transition-colors duration-150
