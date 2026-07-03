@@ -22,10 +22,16 @@ export default function CartPage() {
           </div>
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Your cart is empty</h1>
           <p className="text-gray-400 mb-8">Add some items to get started</p>
-          <Link href="/catalogue"
-            className="inline-flex items-center gap-2 bg-gray-900 text-white font-semibold px-6 py-3 rounded-xl text-sm hover:bg-gray-700 transition-colors">
-            Continue Shopping
-          </Link>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+            <Link href="/catalogue"
+              className="inline-flex items-center gap-2 bg-gray-900 text-white font-semibold px-6 py-3 rounded-xl text-sm hover:bg-gray-700 transition-colors">
+              Continue Shopping
+            </Link>
+            <Link href="/wishlist"
+              className="inline-flex items-center gap-2 border border-gray-200 text-gray-600 font-medium px-6 py-3 rounded-xl text-sm hover:bg-gray-50 transition-colors">
+              View your wishlist
+            </Link>
+          </div>
         </main>
         <Footer />
       </>

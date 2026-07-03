@@ -9,10 +9,14 @@ import { formatPrice, getCloudinaryUrl } from "@thread/utils";
 
 const CONDITION_LABEL: Record<string, string> = {
   BRAND_NEW: "Brand New",
-  EXCELLENT: "Thrift",
-  GOOD:      "Thrift",
-  FAIR:      "Thrift",
+  EXCELLENT: "Excellent",
+  GOOD:      "Good",
+  FAIR:      "Fair",
 };
+
+// Neutral placeholder for items without a photo.
+const BLUR =
+  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='10'%3E%3Crect width='8' height='10' fill='%23f3f4f6'/%3E%3C/svg%3E";
 
 export function WishlistClient() {
   const items = useWishlistStore((s) => s.items);
@@ -58,7 +62,7 @@ export function WishlistClient() {
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
         {items.map((item) => {
           const photo = item.photos[0];
-          const imageUrl = photo ? getCloudinaryUrl(photo, { width: 400, height: 500 }) : "/placeholder.jpg";
+          const imageUrl = photo ? getCloudinaryUrl(photo, { width: 400, height: 500 }) : BLUR;
           const alreadyInCart = inCartSet.has(item.id);
 
           return (
@@ -84,7 +88,7 @@ export function WishlistClient() {
                 />
 
                 {/* Add to cart slide-up */}
-                <div className="absolute bottom-0 inset-x-0 p-2 translate-y-full group-hover:translate-y-0 transition-transform duration-200">
+                <div className="absolute bottom-0 inset-x-0 p-2 translate-y-0 md:translate-y-full md:group-hover:translate-y-0 transition-transform duration-200">
                   <button
                     onClick={(e) => {
                       e.preventDefault();

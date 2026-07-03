@@ -68,6 +68,8 @@ export function CataloguePageClient({ category, condition, gender, sort: initial
   });
 
   const items = data?.pages.flatMap((page) => page.data) ?? [];
+  // Total across all pages (from the API meta) rather than just the loaded count.
+  const totalCount = data?.pages[0]?.meta.total ?? items.length;
 
   return (
     <div>
@@ -75,8 +77,8 @@ export function CataloguePageClient({ category, condition, gender, sort: initial
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">{categoryLabel}</h1>
-          {!isLoading && (
-            <p className="text-sm text-gray-400 mt-0.5">{items.length} item{items.length !== 1 ? "s" : ""}</p>
+          {!isLoading && !isError && (
+            <p className="text-sm text-gray-400 mt-0.5">{totalCount} item{totalCount !== 1 ? "s" : ""}</p>
           )}
         </div>
         <div className="flex items-center gap-3">

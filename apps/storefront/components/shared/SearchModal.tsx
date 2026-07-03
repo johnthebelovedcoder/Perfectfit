@@ -36,30 +36,34 @@ export function SearchModal({ open, onClose }: Props) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const debounced = useDebounce(query, 300);
 
-  // Focus on open
+  // Focus on open + lock background scroll while the modal is open
   useEffect(() => {
-    if (open) {
-      setTimeout(() => inputRef.current?.focus(), 50);
-      setQuery("");
-      setResults([]);
-    }
+    if (!open) return;
+    setTimeout(() => inputRef.current?.focus(), 50);
+    setQuery("");
+    setResults([]);
+    setError(null);
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = ""; };
   }, [open]);
 
   // Search on debounced query
   useEffect(() => {
-    if (!debounced.trim()) { setResults([]); return; }
+    if (!debounced.trim()) { setResults([]); setError(null); return; }
     setLoading(true);
+    setError(null);
     // Dedicated search endpoint: Algolia when configured, DB fallback otherwise.
     fetch(`${API_URL}/v1/search?q=${encodeURIComponent(debounced)}`)
-      .then((r) => r.json())
+      .then((r) => { if (!r.ok) throw new Error(); return r.json(); })
       .then((json) => {
         const items = (json as { data: SearchResult[] }).data ?? [];
         setResults(items);
       })
-      .catch(() => setResults([]))
+      .catch(() => { setResults([]); setError("Search failed. Check your connection and try again."); })
       .finally(() => setLoading(false));
   }, [debounced]);
 
@@ -104,7 +108,11 @@ export function SearchModal({ open, onClose }: Props) {
             <div className="p-8 text-center text-sm text-gray-400">Searching…</div>
           )}
 
-          {!loading && debounced && results.length === 0 && (
+          {!loading && error && (
+            <div className="p-8 text-center text-sm text-red-500">{error}</div>
+          )}
+
+          {!loading && !error && debounced && results.length === 0 && (
             <div className="p-8 text-center text-sm text-gray-400">
               No results for &quot;{debounced}&quot;
             </div>

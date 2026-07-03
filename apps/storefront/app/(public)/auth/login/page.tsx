@@ -77,13 +77,10 @@ function LoginForm() {
             </div>
 
             <div>
-              <div className="flex items-center justify-between mb-1.5">
+              <div className="mb-1.5">
                 <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide">
                   Password
                 </label>
-                <Link href="#" className="text-xs text-gray-400 hover:text-gray-700">
-                  Forgot password?
-                </Link>
               </div>
               <div className="relative">
                 <input
