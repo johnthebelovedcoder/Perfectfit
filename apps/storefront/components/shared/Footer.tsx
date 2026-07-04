@@ -5,8 +5,8 @@ const SELLER_URL = process.env["NEXT_PUBLIC_SELLER_URL"] ?? "http://localhost:30
 export function Footer() {
   return (
     <footer className="bg-gray-900 text-gray-400 border-t border-white/5 py-12 px-4">
-      <div className="container mx-auto grid grid-cols-1 sm:grid-cols-4 gap-8">
-        <div>
+      <div className="container mx-auto grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-8">
+        <div className="col-span-2 sm:col-span-1">
           <p className="font-bold text-white text-lg mb-3">Perfect Fit</p>
           <p className="text-sm leading-relaxed">
             Curated fashion marketplace. Every piece inspected, every listing approved.

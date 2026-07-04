@@ -72,23 +72,23 @@ export function ItemDetailClient({ item, similar, reviews, reviewStats }: Props)
       <main>
         {/* ── Breadcrumb ─────────────────────────────────────────────────── */}
         <div className="bg-gray-50 border-b border-gray-100">
-          <div className="container mx-auto px-4 py-3">
-            <nav className="flex items-center gap-1.5 text-sm" aria-label="Breadcrumb">
+          <div className="container mx-auto px-4 py-2.5">
+            <nav className="flex items-center gap-1.5 text-xs sm:text-sm" aria-label="Breadcrumb">
               <Link href="/" className="text-gray-500 hover:text-gray-900 transition-colors">Home</Link>
-              <span className="text-gray-300">/</span>
-              <Link href="/catalogue" className="text-gray-500 hover:text-gray-900 transition-colors">Shop All</Link>
-              <span className="text-gray-300">/</span>
+              <span className="text-gray-300 hidden sm:inline">/</span>
+              <Link href="/catalogue" className="hidden sm:inline text-gray-500 hover:text-gray-900 transition-colors">Shop All</Link>
+              <span className="text-gray-300 hidden sm:inline">/</span>
               <Link href={`/catalogue?category=${item.category}`}
-                className="text-gray-500 hover:text-gray-900 transition-colors">
+                className="hidden sm:inline text-gray-500 hover:text-gray-900 transition-colors">
                 {catLabel}
               </Link>
               <span className="text-gray-300">/</span>
-              <span className="text-gray-900 font-medium truncate max-w-[200px]">{item.title}</span>
+              <span className="text-gray-900 font-medium truncate max-w-[220px] sm:max-w-[200px]">{item.title}</span>
             </nav>
           </div>
         </div>
 
-        <div className="container mx-auto px-4 py-8 pb-16">
+        <div className="container mx-auto px-4 py-8 pb-28 lg:pb-16">
           <div className="grid gap-10 lg:grid-cols-[1fr,420px]">
             {/* ── Photo viewer ──────────────────────────────────────────── */}
             <div className="space-y-3">
@@ -181,8 +181,8 @@ export function ItemDetailClient({ item, similar, reviews, reviewStats }: Props)
                 </span>
               </div>
 
-              {/* Actions — kept high so the primary CTA is above the fold */}
-              <div className="flex gap-3">
+              {/* Actions (desktop) — mobile uses the sticky bar at the bottom */}
+              <div className="hidden lg:flex gap-3">
                 <div className="flex-1">
                   <AddToCartButton item={item} />
                 </div>
@@ -276,6 +276,27 @@ export function ItemDetailClient({ item, similar, reviews, reviewStats }: Props)
           />
         </div>
       </main>
+
+      {/* Mobile sticky action bar — always reachable without scrolling */}
+      <div
+        className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur border-t border-gray-100 px-4 py-3 flex items-center gap-3"
+        style={{ paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom))" }}
+      >
+        <button
+          onClick={() => toggleWishlist(item)}
+          className={`w-12 h-12 shrink-0 rounded-xl border flex items-center justify-center transition-all ${
+            wishlisted
+              ? "border-rose-300 bg-rose-50 text-rose-500"
+              : "border-gray-200 text-gray-400 hover:text-rose-500"
+          }`}
+          aria-label={wishlisted ? "Remove from wishlist" : "Add to wishlist"}
+        >
+          <Heart className={`h-5 w-5 ${wishlisted ? "fill-rose-500" : ""}`} />
+        </button>
+        <div className="flex-1">
+          <AddToCartButton item={item} />
+        </div>
+      </div>
 
       <Footer />
     </>

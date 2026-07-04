@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { ChevronLeft, ChevronRight } from "lucide-react";
 
 const SLIDES = [
   {
@@ -72,7 +71,6 @@ export function HeroSlider() {
   }, [transitioning]);
 
   const next = useCallback(() => goTo((active + 1) % SLIDES.length), [active, goTo]);
-  const prev = useCallback(() => goTo((active - 1 + SLIDES.length) % SLIDES.length), [active, goTo]);
 
   // Auto-advance every 5 seconds
   useEffect(() => {
@@ -128,22 +126,6 @@ export function HeroSlider() {
           </div>
         </div>
       </div>
-
-      {/* Prev / Next arrows */}
-      <button
-        onClick={prev}
-        className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/20 hover:bg-white/40 backdrop-blur-sm flex items-center justify-center transition-colors text-white z-10"
-        aria-label="Previous slide"
-      >
-        <ChevronLeft className="h-5 w-5" />
-      </button>
-      <button
-        onClick={next}
-        className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/20 hover:bg-white/40 backdrop-blur-sm flex items-center justify-center transition-colors text-white z-10"
-        aria-label="Next slide"
-      >
-        <ChevronRight className="h-5 w-5" />
-      </button>
 
       {/* Dot indicators */}
       <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 z-10">

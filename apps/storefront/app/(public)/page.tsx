@@ -57,14 +57,20 @@ export default function HomePage() {
               <h2 className="text-2xl font-bold text-gray-900">Shop by Category</h2>
               <p className="text-sm text-gray-400 mt-1">Find exactly what you&apos;re looking for</p>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 max-w-4xl mx-auto">
-              {CATEGORIES.map(({ label, value }) => (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 max-w-4xl mx-auto">
+              {CATEGORIES.slice(0, 5).map(({ label, value }) => (
                 <Link key={value} href={`/catalogue?category=${value}`}
                   className="flex items-center gap-3 bg-white rounded-xl p-4 border border-gray-100 hover:border-gray-300 hover:shadow-sm transition-all">
                   <span className="flex items-center justify-center w-8 h-8 shrink-0 rounded-lg bg-gray-100 text-sm font-bold text-gray-400">{label[0]}</span>
                   <span className="text-sm text-gray-700 font-medium leading-tight">{label}</span>
                 </Link>
               ))}
+            </div>
+            <div className="text-center mt-6">
+              <Link href="/catalogue"
+                className="inline-flex items-center gap-2 text-sm font-semibold text-gray-900 bg-white border border-gray-200 hover:border-gray-300 hover:shadow-sm px-6 py-3 rounded-xl transition-all">
+                See all categories →
+              </Link>
             </div>
           </div>
         </section>
