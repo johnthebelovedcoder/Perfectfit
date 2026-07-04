@@ -1,7 +1,7 @@
 import { Header } from "@/components/shared/Header";
 import { Footer } from "@/components/shared/Footer";
 
-const LAST_UPDATED = "1 June 2025";
+const LAST_UPDATED = "4 July 2026";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -71,7 +71,7 @@ export default function PrivacyPage() {
             </Section>
 
             <Section title="7. Your rights">
-              <p>You have the right to: access your personal data, correct inaccurate data, request deletion (&quot;right to be forgotten&quot;), restrict or object to processing, and data portability. To exercise any of these rights, contact us at privacy@perfectfit.com.</p>
+              <p>You have the right to: access your personal data, correct inaccurate data, request deletion (&quot;right to be forgotten&quot;), restrict or object to processing, and data portability. To exercise any of these rights, contact us at fgsperfectfit@gmail.com.</p>
             </Section>
 
             <Section title="8. Security">
@@ -83,7 +83,7 @@ export default function PrivacyPage() {
             </Section>
 
             <Section title="10. Contact">
-              <p>For privacy-related questions, email us at privacy@perfectfit.com.</p>
+              <p>For privacy-related questions, email us at fgsperfectfit@gmail.com.</p>
             </Section>
           </div>
         </section>

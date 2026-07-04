@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Header } from "@/components/shared/Header";
 import { Footer } from "@/components/shared/Footer";
 import { CheckCircle, XCircle, Camera, Star, Shield } from "lucide-react";
@@ -116,6 +117,20 @@ export default function QualityPromisePage() {
                 </div>
               ))}
             </div>
+          </div>
+        </section>
+
+        {/* CTA */}
+        <section className="py-16 px-4 bg-gray-900 text-center">
+          <div className="container mx-auto max-w-xl">
+            <h2 className="text-2xl font-bold text-white mb-3">Shop with confidence</h2>
+            <p className="text-gray-400 text-sm mb-6">Every piece is inspected and graded before it&apos;s listed — so what you see is what you get.</p>
+            <Link
+              href="/catalogue"
+              className="inline-flex items-center justify-center gap-2 bg-white text-gray-900 font-semibold px-7 py-3.5 rounded-xl text-sm hover:bg-gray-100 transition-colors"
+            >
+              Browse the collection →
+            </Link>
           </div>
         </section>
       </main>

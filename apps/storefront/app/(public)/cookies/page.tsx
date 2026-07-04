@@ -1,7 +1,7 @@
 import { Header } from "@/components/shared/Header";
 import { Footer } from "@/components/shared/Footer";
 
-const LAST_UPDATED = "1 June 2025";
+const LAST_UPDATED = "4 July 2026";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -93,7 +93,7 @@ export default function CookiesPage() {
             </Section>
 
             <Section title="Contact">
-              <p>Questions about our use of cookies? Email privacy@perfectfit.com.</p>
+              <p>Questions about our use of cookies? Email fgsperfectfit@gmail.com.</p>
             </Section>
           </div>
         </section>

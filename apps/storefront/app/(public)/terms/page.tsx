@@ -1,7 +1,7 @@
 import { Header } from "@/components/shared/Header";
 import { Footer } from "@/components/shared/Footer";
 
-const LAST_UPDATED = "1 June 2025";
+const LAST_UPDATED = "4 July 2026";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -80,7 +80,7 @@ export default function TermsPage() {
             </Section>
 
             <Section title="10. Contact">
-              <p>Questions about these terms? Email legal@perfectfit.com.</p>
+              <p>Questions about these terms? Email fgsperfectfit@gmail.com.</p>
             </Section>
           </div>
         </section>
