@@ -90,6 +90,7 @@ export function SizeChartModal({ category }: Props) {
               </div>
               <button
                 onClick={() => setOpen(false)}
+                aria-label="Close size chart"
                 className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-700 transition-colors"
               >
                 <X className="h-4 w-4" />

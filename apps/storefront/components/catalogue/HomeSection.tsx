@@ -12,7 +12,7 @@ interface Props {
 }
 
 export function HomeSection({ limit = 4, offset = 0, category }: Props) {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError } = useQuery({
     queryKey: ["home-items", { limit, offset, category }],
     queryFn: async () => {
       const params = new URLSearchParams({ limit: String(limit + offset) });
@@ -35,6 +35,14 @@ export function HomeSection({ limit = 4, offset = 0, category }: Props) {
           </div>
         ))}
       </div>
+    );
+  }
+
+  if (isError || (data ?? []).length === 0) {
+    return (
+      <p className="text-sm text-gray-400 py-6">
+        {isError ? "Couldn't load these right now — please refresh." : "Nothing here yet — check back soon."}
+      </p>
     );
   }
 

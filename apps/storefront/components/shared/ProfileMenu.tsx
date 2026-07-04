@@ -83,6 +83,7 @@ export function ProfileMenu() {
             <Link
               href={`${process.env.NEXT_PUBLIC_SELLER_URL ?? "http://localhost:3002"}`}
               target="_blank"
+              rel="noopener noreferrer"
               onClick={() => setOpen(false)}
               className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
             >
