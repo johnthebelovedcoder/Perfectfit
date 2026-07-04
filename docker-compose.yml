@@ -28,6 +28,16 @@ services:
     image: redis:7-alpine
     restart: unless-stopped
 
+  # Auto-deploy: every 2 minutes Watchtower checks the registry and, when a
+  # service's :latest image has changed (i.e. after the GitHub Actions build
+  # finishes), pulls it and recreates that container. --cleanup removes old images.
+  watchtower:
+    image: containrrr/watchtower
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: --interval 120 --cleanup
+
   caddy:
     image: caddy:2-alpine
     restart: unless-stopped
