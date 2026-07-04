@@ -3,14 +3,15 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Heart, ChevronLeft, ChevronRight, Shield, Truck, RotateCcw, Star } from "lucide-react";
+import { Heart, ChevronLeft, ChevronRight, ChevronDown, Shield, Truck, RotateCcw, Star } from "lucide-react";
 import { AddToCartButton } from "./AddToCartButton";
 import { ItemCard } from "./ItemCard";
 import { SizeChartModal } from "./SizeChartModal";
 import { ReviewsSection } from "./ReviewsSection";
 import { useWishlistStore } from "@/stores/wishlist.store";
 import { Footer } from "@/components/shared/Footer";
-import { formatPrice, getCloudinaryUrl } from "@thread/utils";
+import { Price } from "@/components/shared/Price";
+import { getCloudinaryUrl } from "@thread/utils";
 import { categoryLabel } from "@thread/types";
 import type { CatalogueItem } from "@thread/types";
 
@@ -26,6 +27,27 @@ const CONDITION_LABEL: Record<string, string> = {
   GOOD:      "Good",
   FAIR:      "Fair",
 };
+
+const INFO_SECTIONS: { key: string; title: string; body: string }[] = [
+  {
+    key: "shipping",
+    title: "Shipping & Delivery",
+    body:
+      "Ships from our warehouse within 1–2 business days of your order. Standard delivery is typically 3–7 business days, with tracking sent to your email. International delivery is available and calculated at checkout.",
+  },
+  {
+    key: "returns",
+    title: "Returns & Exchanges",
+    body:
+      "You have 48 hours from delivery to request a return if an item arrives not as described. Because every piece is one-of-a-kind, we can't offer size swaps — please check the size chart before ordering.",
+  },
+  {
+    key: "care",
+    title: "Fabric & Care",
+    body:
+      "To keep prints vibrant, wash cold on a gentle cycle (or hand-wash), turn inside-out, and hang or lay flat to dry. Iron on low, inside-out. Avoid bleach.",
+  },
+];
 
 interface ReviewData {
   id: string;
@@ -52,6 +74,7 @@ interface Props {
 
 export function ItemDetailClient({ item, similar, reviews, reviewStats }: Props) {
   const [activeIdx, setActiveIdx] = useState(0);
+  const [openInfo, setOpenInfo] = useState<string | null>("shipping");
   const toggleWishlist = useWishlistStore((s) => s.toggle);
   const wishlisted = useWishlistStore((s) => s.items.some((i) => i.id === item.id));
 
@@ -165,7 +188,7 @@ export function ItemDetailClient({ item, similar, reviews, reviewStats }: Props)
                     </span>
                   </a>
                 )}
-                <p className="mt-3 text-3xl font-bold text-gray-900">{formatPrice(item.retailPrice)}</p>
+                <Price cents={item.retailPrice} className="mt-3 block text-3xl font-bold text-gray-900" />
               </div>
 
               {/* Condition + size + gender pills */}
@@ -244,6 +267,25 @@ export function ItemDetailClient({ item, similar, reviews, reviewStats }: Props)
                       <p className="text-xs font-semibold text-gray-800">{label}</p>
                       <p className="text-xs text-gray-400">{desc}</p>
                     </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Info accordions — Shipping / Returns / Care */}
+              <div className="border border-gray-100 rounded-xl divide-y divide-gray-100">
+                {INFO_SECTIONS.map((s) => (
+                  <div key={s.key}>
+                    <button
+                      onClick={() => setOpenInfo((cur) => (cur === s.key ? null : s.key))}
+                      className="w-full flex items-center justify-between px-4 py-3 text-left"
+                      aria-expanded={openInfo === s.key}
+                    >
+                      <span className="text-sm font-semibold text-gray-800">{s.title}</span>
+                      <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${openInfo === s.key ? "rotate-180" : ""}`} />
+                    </button>
+                    {openInfo === s.key && (
+                      <p className="px-4 pb-4 text-sm text-gray-500 leading-relaxed">{s.body}</p>
+                    )}
                   </div>
                 ))}
               </div>

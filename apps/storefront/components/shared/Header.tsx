@@ -6,6 +6,7 @@ import { Search, Heart, Menu, X } from "lucide-react";
 import { CartButton } from "./CartButton";
 import { SearchModal } from "./SearchModal";
 import { ProfileMenu } from "./ProfileMenu";
+import { CurrencySelector } from "./CurrencySelector";
 import { useWishlistStore } from "@/stores/wishlist.store";
 
 // Curated top-nav subset (short labels). The full category list lives in the
@@ -59,6 +60,7 @@ export function Header() {
           </nav>
 
           <div className="flex items-center gap-1">
+            <CurrencySelector />
             <button
               onClick={() => setSearchOpen(true)}
               className="p-2 text-gray-500 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors"

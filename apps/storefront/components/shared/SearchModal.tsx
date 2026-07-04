@@ -4,7 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { Search, X, ArrowRight } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { formatPrice, getCloudinaryUrl } from "@thread/utils";
+import { getCloudinaryUrl } from "@thread/utils";
+import { Price } from "./Price";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
@@ -144,7 +145,7 @@ export function SearchModal({ open, onClose }: Props) {
                         <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">{item.brand}</p>
                       )}
                       <p className="text-sm font-medium text-gray-800 truncate">{item.title}</p>
-                      <p className="text-sm font-bold text-gray-900 mt-0.5">{formatPrice(item.retailPrice)}</p>
+                      <Price cents={item.retailPrice} className="text-sm font-bold text-gray-900 mt-0.5" />
                     </div>
                     <ArrowRight className="h-4 w-4 text-gray-300 shrink-0" />
                   </Link>

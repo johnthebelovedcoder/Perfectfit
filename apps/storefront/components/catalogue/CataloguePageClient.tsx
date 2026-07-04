@@ -6,7 +6,8 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { ItemCard } from "./ItemCard";
 import Image from "next/image";
 import Link from "next/link";
-import { formatPrice, getCloudinaryUrl } from "@thread/utils";
+import { getCloudinaryUrl } from "@thread/utils";
+import { Price } from "@/components/shared/Price";
 import type { CatalogueItem, PaginationMeta } from "@thread/types";
 import { QueryError } from "@/components/shared/QueryError";
 
@@ -183,7 +184,7 @@ export function CataloguePageClient({ category, condition, gender, sort: initial
                       <p className="text-xs text-gray-400 mt-0.5">Size {item.size} · {condLabel}</p>
                     </div>
                     <div className="text-right shrink-0">
-                      <p className="text-sm font-bold text-gray-900">{formatPrice(item.retailPrice)}</p>
+                      <Price cents={item.retailPrice} className="text-sm font-bold text-gray-900" />
                       <span className={`text-xs font-semibold px-2 py-0.5 rounded-full mt-1 inline-block ${
                         item.condition === "BRAND_NEW"
                           ? "bg-blue-100 text-blue-700"

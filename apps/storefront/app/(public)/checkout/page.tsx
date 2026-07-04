@@ -12,7 +12,8 @@ import { Footer } from "@/components/shared/Footer";
 import { useCartStore } from "@/stores/cart.store";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { useAuth } from "@/lib/auth";
-import { formatPrice, getCloudinaryUrl } from "@thread/utils";
+import { getCloudinaryUrl } from "@thread/utils";
+import { Price } from "@/components/shared/Price";
 import { api } from "@/lib/api";
 import { GuestCheckoutSchema } from "@thread/types";
 import type { GuestCheckout } from "@thread/types";
@@ -316,7 +317,7 @@ export default function CheckoutPage() {
                   Order Summary ({items.length} item{items.length !== 1 ? "s" : ""})
                 </span>
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-bold">{formatPrice(subtotal)}</span>
+                  <Price cents={subtotal} className="text-sm font-bold" />
                   {orderSummaryOpen ? <ChevronUp className="h-4 w-4 text-gray-400" /> : <ChevronDown className="h-4 w-4 text-gray-400" />}
                 </div>
               </button>
@@ -347,7 +348,7 @@ export default function CheckoutPage() {
                           <p className="text-xs font-medium text-gray-900 line-clamp-2">{item.title}</p>
                           <p className="text-xs text-gray-400">Size {item.size}</p>
                         </div>
-                        <p className="text-sm font-semibold text-gray-900 shrink-0">{formatPrice(item.retailPrice)}</p>
+                        <Price cents={item.retailPrice} className="text-sm font-semibold text-gray-900 shrink-0" />
                       </div>
                     );
                   })}
@@ -357,7 +358,7 @@ export default function CheckoutPage() {
                 <div className="p-5 space-y-3">
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-400">Subtotal</span>
-                    <span className="font-medium text-gray-900">{formatPrice(subtotal)}</span>
+                    <Price cents={subtotal} className="font-medium text-gray-900" />
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-400">Shipping</span>
@@ -365,8 +366,9 @@ export default function CheckoutPage() {
                   </div>
                   <div className="border-t border-gray-100 pt-3 flex justify-between">
                     <span className="font-bold text-gray-900">Total</span>
-                    <span className="text-lg font-bold text-gray-900">{formatPrice(subtotal)}</span>
+                    <Price cents={subtotal} className="text-lg font-bold text-gray-900" />
                   </div>
+                  <p className="text-[11px] text-gray-400 text-right">Charged in USD at checkout.</p>
                 </div>
               </div>
 
@@ -382,7 +384,7 @@ export default function CheckoutPage() {
                   ? "Offline — reconnect to order"
                   : isSubmitting
                     ? "Placing Order..."
-                    : `Place Order — ${formatPrice(subtotal)}`}
+                    : <>Place Order — <Price cents={subtotal} /></>}
               </button>
 
               {/* Trust row */}

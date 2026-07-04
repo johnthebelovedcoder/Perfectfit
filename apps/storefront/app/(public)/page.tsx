@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Shield, Truck, RotateCcw } from "lucide-react";
+import { Shield, Truck, RotateCcw, Star } from "lucide-react";
 import { Header } from "@/components/shared/Header";
 import { Footer } from "@/components/shared/Footer";
 import { HeroSlider } from "@/components/shared/HeroSlider";
@@ -7,6 +7,19 @@ import { HomeSection } from "@/components/catalogue/HomeSection";
 import { CATEGORY_VALUES, categoryLabel } from "@thread/types";
 
 const CATEGORIES = CATEGORY_VALUES.map((value) => ({ value, label: categoryLabel(value) }));
+
+const OCCASIONS = [
+  { label: "Weddings", desc: "Aso-Oke, lace & bridal sets", href: "/catalogue?category=TRADITIONAL_WEDDING_ATTIRE", bg: "from-rose-500 to-rose-700" },
+  { label: "Festive & Party", desc: "Bold Ankara statements", href: "/catalogue?category=ANKARA_OUTFITS", bg: "from-amber-500 to-orange-600" },
+  { label: "Everyday", desc: "Effortless women's wear", href: "/catalogue?category=WOMENS_AFRICAN_WEAR", bg: "from-emerald-500 to-teal-700" },
+  { label: "For Him", desc: "Agbada, kaftans & senators", href: "/catalogue?category=MENS_AFRICAN_WEAR", bg: "from-slate-600 to-slate-800" },
+];
+
+const TESTIMONIALS = [
+  { name: "Amara O.", location: "Houston, TX", quote: "Everything I couldn't find without flying home. Arrived fast, exactly as pictured, and the quality was better than I expected." },
+  { name: "Kwame B.", location: "London, UK", quote: "Ordered an agbada for a wedding — inspected, well-packaged, and delivered in days. No more risky imports and long waits." },
+  { name: "Ngozi A.", location: "Toronto, CA", quote: "Finally a place I trust for authentic Ankara. The size chart was spot on and returns gave me peace of mind." },
+];
 
 export default function HomePage() {
   return (
@@ -85,6 +98,51 @@ export default function HomePage() {
             <Link href="/catalogue" className="text-sm font-medium text-gray-500 hover:text-gray-800 transition-colors">View All →</Link>
           </div>
           <HomeSection limit={4} offset={4} />
+        </section>
+
+        {/* Shop by Occasion */}
+        <section className="container mx-auto px-4 py-12">
+          <div className="text-center mb-8">
+            <h2 className="text-2xl font-bold text-gray-900">Shop by Occasion</h2>
+            <p className="text-sm text-gray-400 mt-1">The right piece for every moment</p>
+          </div>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {OCCASIONS.map((o) => (
+              <Link
+                key={o.label}
+                href={o.href}
+                className={`group relative overflow-hidden rounded-2xl p-6 h-40 flex flex-col justify-end bg-gradient-to-br ${o.bg}`}
+              >
+                <span className="text-white text-lg font-bold">{o.label}</span>
+                <span className="text-white/80 text-xs mt-0.5">{o.desc}</span>
+                <span className="absolute top-4 right-4 text-white/70 text-lg group-hover:translate-x-1 transition-transform">→</span>
+              </Link>
+            ))}
+          </div>
+        </section>
+
+        {/* Testimonials */}
+        <section className="bg-gray-50 py-14 px-4">
+          <div className="container mx-auto max-w-5xl">
+            <div className="text-center mb-8">
+              <h2 className="text-2xl font-bold text-gray-900">Loved by our community</h2>
+              <p className="text-sm text-gray-400 mt-1">Authentic African fashion, delivered with care</p>
+            </div>
+            <div className="grid gap-5 sm:grid-cols-3">
+              {TESTIMONIALS.map((t) => (
+                <div key={t.name} className="bg-white rounded-2xl border border-gray-100 p-6">
+                  <div className="flex gap-0.5 mb-3">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <Star key={i} className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+                    ))}
+                  </div>
+                  <p className="text-sm text-gray-600 leading-relaxed">&ldquo;{t.quote}&rdquo;</p>
+                  <p className="text-xs font-semibold text-gray-900 mt-4">{t.name}</p>
+                  <p className="text-xs text-gray-400">{t.location}</p>
+                </div>
+              ))}
+            </div>
+          </div>
         </section>
 
         {/* Seller CTA */}

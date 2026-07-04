@@ -5,7 +5,8 @@ import Image from "next/image";
 import { Heart, ShoppingBag, X, ArrowRight } from "lucide-react";
 import { useWishlistStore } from "@/stores/wishlist.store";
 import { useCartStore } from "@/stores/cart.store";
-import { formatPrice, getCloudinaryUrl } from "@thread/utils";
+import { getCloudinaryUrl } from "@thread/utils";
+import { Price } from "@/components/shared/Price";
 
 const CONDITION_LABEL: Record<string, string> = {
   BRAND_NEW: "Brand New",
@@ -111,7 +112,7 @@ export function WishlistClient() {
                 )}
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-sm font-medium text-gray-900 line-clamp-1">{item.title}</p>
-                  <p className="text-sm font-bold text-gray-900 shrink-0">{formatPrice(item.retailPrice)}</p>
+                  <Price cents={item.retailPrice} className="text-sm font-bold text-gray-900 shrink-0" />
                 </div>
                 <div className="flex items-center justify-between">
                   <p className="text-xs text-gray-400">Size {item.size}</p>

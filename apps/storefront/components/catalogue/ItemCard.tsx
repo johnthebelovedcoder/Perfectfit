@@ -3,7 +3,8 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Heart, ShoppingBag, Star } from "lucide-react";
-import { formatPrice, getCloudinaryUrl } from "@thread/utils";
+import { getCloudinaryUrl } from "@thread/utils";
+import { Price } from "@/components/shared/Price";
 import type { CatalogueItem } from "@thread/types";
 import { useCartStore } from "@/stores/cart.store";
 import { useWishlistStore } from "@/stores/wishlist.store";
@@ -118,7 +119,7 @@ export function ItemCard({ item, priority = false }: ItemCardProps) {
         )}
         <div className="flex items-center justify-between gap-2">
           <p className="text-sm font-medium text-gray-900 line-clamp-1 flex-1">{item.title}</p>
-          <p className="text-sm font-bold text-gray-900 shrink-0">{formatPrice(item.retailPrice)}</p>
+          <Price cents={item.retailPrice} className="text-sm font-bold text-gray-900 shrink-0" />
         </div>
         <div className="flex items-center justify-between">
           <p className="text-xs text-gray-400">Size {item.size}</p>

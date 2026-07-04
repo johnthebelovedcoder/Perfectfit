@@ -4,7 +4,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { X, ShoppingBag } from "lucide-react";
 import { useCartStore } from "@/stores/cart.store";
-import { formatPrice, getCloudinaryUrl } from "@thread/utils";
+import { getCloudinaryUrl } from "@thread/utils";
+import { Price } from "@/components/shared/Price";
 import { Header } from "@/components/shared/Header";
 import { Footer } from "@/components/shared/Footer";
 
@@ -84,7 +85,7 @@ export default function CartPage() {
 
                     <div className="mt-3 flex items-center justify-between">
                       <span className="text-xs text-gray-400 border border-gray-200 rounded-lg px-2.5 py-1">Qty: 1 — one of a kind</span>
-                      <p className="text-sm font-bold text-gray-900">{formatPrice(item.retailPrice)}</p>
+                      <Price cents={item.retailPrice} className="text-sm font-bold text-gray-900" />
                     </div>
                   </div>
                 </div>
@@ -99,7 +100,7 @@ export default function CartPage() {
             <div className="space-y-3 text-sm">
               <div className="flex items-center justify-between">
                 <span className="text-gray-400">Subtotal ({items.length} item{items.length !== 1 ? "s" : ""})</span>
-                <span className="font-medium text-gray-900">{formatPrice(subtotal)}</span>
+                <Price cents={subtotal} className="font-medium text-gray-900" />
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-gray-400">Delivery</span>
@@ -109,7 +110,7 @@ export default function CartPage() {
 
             <div className="border-t border-gray-100 pt-4 flex items-center justify-between">
               <span className="font-bold text-gray-900">Total</span>
-              <span className="text-lg font-bold text-gray-900">{formatPrice(subtotal)}</span>
+              <Price cents={subtotal} className="text-lg font-bold text-gray-900" />
             </div>
 
             <Link href="/checkout"
