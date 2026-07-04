@@ -109,7 +109,7 @@ export default function OrdersPage() {
   });
 
   return (
-    <div className="p-8 space-y-6">
+    <div className="p-4 sm:p-8 space-y-6">
       {isError && <QueryError onRetry={() => void refetch()} />}
       {mutationError && (
         <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700">
@@ -183,7 +183,7 @@ export default function OrdersPage() {
                     )}
                   </div>
                 </div>
-                <div className="grid grid-cols-3 gap-4 px-5 py-4 text-sm">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 px-5 py-4 text-sm">
                   <div>
                     <p className="text-xs text-gray-400 uppercase tracking-wide font-medium mb-2">Items</p>
                     {order.orderItems.map((oi, i) => (

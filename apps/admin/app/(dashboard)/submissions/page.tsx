@@ -77,7 +77,7 @@ export default function SubmissionsPage() {
   });
 
   return (
-    <div className="p-8 space-y-6">
+    <div className="p-4 sm:p-8 space-y-6">
       {isError && <QueryError onRetry={() => void refetch()} />}
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Submissions</h1>

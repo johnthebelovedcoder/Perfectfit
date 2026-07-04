@@ -99,7 +99,7 @@ export default function AnalyticsPage() {
   const usingCustom = !!(customFrom && customTo);
 
   return (
-    <div className="p-8 space-y-8">
+    <div className="p-4 sm:p-8 space-y-8">
       {isError && <QueryError onRetry={() => void refetch()} />}
       <div className="flex items-start justify-between flex-wrap gap-4">
         <div>

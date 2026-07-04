@@ -2,18 +2,19 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { Search, LogOut, Settings, ChevronDown } from "lucide-react";
+import { Search, LogOut, Menu, ChevronDown } from "lucide-react";
 import { clearAuth, getAuth } from "@/lib/auth";
 import { NotificationBell } from "./NotificationBell";
 
 const PAGE_TITLES: Record<string, string> = {
   "/dashboard": "Dashboard",
+  "/analytics": "Analytics",
   "/submissions": "Submissions",
   "/items": "Catalogue",
   "/orders": "Orders",
   "/payouts": "Payouts",
   "/sellers": "Sellers",
-  "/settings": "Settings",
+  "/security": "Security",
 };
 
 function getPageTitle(pathname: string): string {
@@ -64,12 +65,6 @@ function UserMenu() {
             <p className="text-xs text-gray-400">Signed in as</p>
             <p className="text-sm font-medium text-gray-800 truncate">{email}</p>
           </div>
-          <a
-            href="/sellers"
-            className="flex items-center gap-2 px-3 py-2.5 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
-          >
-            <Settings className="h-4 w-4" /> Settings
-          </a>
           <button
             onClick={() => { clearAuth(); router.push("/login"); }}
             className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-red-500 hover:bg-red-50 transition-colors"
@@ -82,7 +77,7 @@ function UserMenu() {
   );
 }
 
-export function AdminHeader() {
+export function AdminHeader({ onMenuClick }: { onMenuClick: () => void }) {
   const pathname = usePathname();
   const router = useRouter();
   const [search, setSearch] = useState("");
@@ -107,12 +102,20 @@ export function AdminHeader() {
   }
 
   return (
-    <header className="h-14 bg-white border-b border-gray-100 flex items-center gap-4 px-6 shrink-0">
-      {/* Page title */}
-      <h1 className="text-sm font-semibold text-gray-900 w-28 shrink-0">{title}</h1>
+    <header className="h-14 bg-white border-b border-gray-100 flex items-center gap-3 px-4 sm:px-6 shrink-0">
+      <button
+        onClick={onMenuClick}
+        className="lg:hidden p-2 -ml-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+        aria-label="Open menu"
+      >
+        <Menu className="h-5 w-5" />
+      </button>
 
-      {/* Search */}
-      <form onSubmit={handleSearch} className="flex-1 max-w-md">
+      {/* Page title */}
+      <h1 className="text-sm font-semibold text-gray-900 shrink-0">{title}</h1>
+
+      {/* Search — hidden on mobile (each page has its own search) */}
+      <form onSubmit={handleSearch} className="hidden md:block flex-1 max-w-md">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
           <input

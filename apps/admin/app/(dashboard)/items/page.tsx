@@ -101,7 +101,7 @@ export default function CataloguePage() {
 
   return (
     <>
-    <div className="p-8 space-y-6">
+    <div className="p-4 sm:p-8 space-y-6">
       {isError && <QueryError onRetry={() => void refetch()} />}
       {mutationError && (
         <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700">
