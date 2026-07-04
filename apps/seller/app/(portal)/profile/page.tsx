@@ -190,7 +190,7 @@ export default function ProfilePage() {
       <Skeleton className="h-8 w-40" />
       <div className="bg-white rounded-2xl p-6 space-y-4">
         <div className="flex gap-4"><Skeleton className="w-16 h-16 rounded-full" /><div className="space-y-2 flex-1"><Skeleton className="h-5 w-40" /><Skeleton className="h-3 w-24" /></div></div>
-        <div className="grid grid-cols-4 gap-3">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-16 rounded-xl" />)}</div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-16 rounded-xl" />)}</div>
       </div>
     </div>
   );

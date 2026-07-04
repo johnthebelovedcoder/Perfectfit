@@ -138,7 +138,7 @@ export default function SubmissionDetailPage({ params }: { params: { id: string 
   });
 
   if (!sub) return (
-    <div className="p-8 flex items-center justify-center h-64 text-gray-400">Loading...</div>
+    <div className="p-4 sm:p-8 flex items-center justify-center h-64 text-gray-400">Loading...</div>
   );
 
   const photos = sub.photos ?? [];
@@ -158,7 +158,7 @@ export default function SubmissionDetailPage({ params }: { params: { id: string 
   ];
 
   return (
-    <div className="p-8 max-w-3xl">
+    <div className="p-4 sm:p-8 max-w-3xl">
       {MutationErrorBanner}
       <Link href="/dashboard" className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-gray-700 mb-6 transition-colors">
         <ArrowLeft className="h-4 w-4" /> Back to Dashboard
