@@ -2,12 +2,13 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { LogOut, User, ChevronDown, Settings } from "lucide-react";
+import { LogOut, User, ChevronDown, Menu } from "lucide-react";
 import { clearAuth, getAuth } from "@/lib/auth";
 import { NotificationBell } from "./NotificationBell";
 
 const PAGE_TITLES: Record<string, string> = {
   "/dashboard": "Dashboard",
+  "/analytics": "Analytics",
   "/submissions": "My Submissions",
   "/profile": "My Profile",
 };
@@ -82,13 +83,20 @@ function UserMenu() {
   );
 }
 
-export function SellerHeader() {
+export function SellerHeader({ onMenuClick }: { onMenuClick: () => void }) {
   const pathname = usePathname();
   const title = getPageTitle(pathname);
 
   return (
-    <header className="h-14 bg-white border-b border-gray-100 flex items-center gap-4 px-6 shrink-0">
-      <h1 className="text-sm font-semibold text-gray-900 w-36 shrink-0">{title}</h1>
+    <header className="h-14 bg-white border-b border-gray-100 flex items-center gap-3 px-4 sm:px-6 shrink-0">
+      <button
+        onClick={onMenuClick}
+        className="lg:hidden p-2 -ml-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+        aria-label="Open menu"
+      >
+        <Menu className="h-5 w-5" />
+      </button>
+      <h1 className="text-sm font-semibold text-gray-900 shrink-0">{title}</h1>
 
       {/* Spacer */}
       <div className="flex-1" />

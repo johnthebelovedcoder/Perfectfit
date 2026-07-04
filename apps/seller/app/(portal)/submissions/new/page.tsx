@@ -62,7 +62,7 @@ export default function NewSubmissionPage() {
 
   if (profileLoading) {
     return (
-      <div className="p-8 max-w-2xl">
+      <div className="p-4 sm:p-8 max-w-2xl">
         <div className="animate-pulse h-8 bg-gray-100 rounded-xl w-48 mb-10" />
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 h-64" />
       </div>
@@ -71,7 +71,7 @@ export default function NewSubmissionPage() {
 
   if (!isVerified) {
     return (
-      <div className="p-8 max-w-2xl">
+      <div className="p-4 sm:p-8 max-w-2xl">
         <div className="bg-amber-50 border border-amber-200 rounded-2xl p-8 text-center">
           <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-amber-100 mb-4">
             <AlertTriangle className="h-7 w-7 text-amber-600" />

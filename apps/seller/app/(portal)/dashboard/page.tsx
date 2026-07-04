@@ -86,7 +86,7 @@ export default function DashboardPage() {
   const greeting = profile?.firstName ? `Hey, ${profile.firstName} 👋` : "Dashboard";
 
   return (
-    <div className="p-8 space-y-7">
+    <div className="p-4 sm:p-8 space-y-7">
       {subsError && <QueryError onRetry={() => void refetchSubs()} />}
       {/* Verification warning */}
       {!isVerified && (

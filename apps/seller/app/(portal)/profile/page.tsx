@@ -214,7 +214,7 @@ export default function ProfilePage() {
   ];
 
   return (
-    <div className="p-8 max-w-3xl space-y-6">
+    <div className="p-4 sm:p-8 max-w-3xl space-y-6">
       <h1 className="text-2xl font-bold text-gray-900">My Profile</h1>
 
       {/* Verification warning */}
@@ -249,7 +249,7 @@ export default function ProfilePage() {
           <p className="text-xs text-gray-400 mt-0.5">Member since {memberSince}</p>
 
           {/* Stats row */}
-          <div className="grid grid-cols-5 gap-3 mt-5">
+          <div className="grid grid-cols-3 sm:grid-cols-5 gap-3 mt-5">
             {STATS.map(({ label, value, icon: Icon, color, bg }) => (
               <div key={label} className={`${bg} rounded-xl p-3 text-center`}>
                 <Icon className={`h-4 w-4 ${color} mx-auto mb-1`} />
@@ -278,7 +278,7 @@ export default function ProfilePage() {
 
         {editing === "personal" ? (
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <EditField label="First Name" value={personal.firstName} onChange={(v) => setPersonal((p) => ({ ...p, firstName: v }))} />
               <EditField label="Last Name" value={personal.lastName} onChange={(v) => setPersonal((p) => ({ ...p, lastName: v }))} />
               <EditField label="Phone" value={personal.phone} onChange={(v) => setPersonal((p) => ({ ...p, phone: v }))} placeholder="+1 234 567 8900" />
@@ -298,7 +298,7 @@ export default function ProfilePage() {
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-x-8 gap-y-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-5">
             <div className="flex items-start gap-3">
               <Mail className="h-4 w-4 text-gray-300 mt-0.5 shrink-0" />
               <Field label="Email" value={profile.user.email} hint={profile.user.emailVerified ? "Verified" : "Not verified"} />
@@ -336,7 +336,7 @@ export default function ProfilePage() {
               <Lock className="h-3.5 w-3.5 shrink-0 mt-0.5" />
               <span>The <strong>Account Name</strong> must exactly match your registered name: <strong>{profile.firstName} {profile.lastName}</strong>. Mismatched accounts delay payouts.</span>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <EditField label="Bank Name" value={payout.bankName} onChange={(v) => setPayout((p) => ({ ...p, bankName: v }))} placeholder="e.g. Chase, Barclays" />
               <EditField
                 label="Account Name"
@@ -380,7 +380,7 @@ export default function ProfilePage() {
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-x-8 gap-y-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-5">
             <div className="flex items-start gap-3">
               <Building2 className="h-4 w-4 text-gray-300 mt-0.5 shrink-0" />
               <Field label="Bank" value={profile.bankName} />

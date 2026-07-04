@@ -46,7 +46,7 @@ export default function SubmissionsPage() {
   const submissions = data ?? [];
 
   return (
-    <div className="p-8 space-y-6">
+    <div className="p-4 sm:p-8 space-y-6">
       {isError && <QueryError onRetry={() => void refetch()} />}
       <div className="flex items-start justify-between">
         <div>

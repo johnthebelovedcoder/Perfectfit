@@ -102,13 +102,6 @@ function LoginForm() {
             <Link href="/register" className="font-semibold text-gray-800 hover:underline">Register as a Seller</Link>
           </p>
         </div>
-
-        <p className="text-center mt-6">
-          <Link href={`${process.env["NEXT_PUBLIC_ADMIN_URL"] ?? "http://localhost:3003"}/login`}
-            className="text-sm text-gray-400 hover:text-gray-600 transition-colors">
-            Admin Login
-          </Link>
-        </p>
       </div>
     </main>
   );
