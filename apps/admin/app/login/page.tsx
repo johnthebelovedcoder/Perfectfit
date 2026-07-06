@@ -14,6 +14,7 @@ const API_URL = process.env["NEXT_PUBLIC_API_URL"] ?? "http://localhost:3001";
 function AdminLoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const justReset = searchParams.get("reset") === "1";
   const [error, setError] = useState<string | null>(null);
   const [showPass, setShowPass] = useState(false);
   const [mfaRequired, setMfaRequired] = useState(false);
@@ -65,6 +66,11 @@ function AdminLoginForm() {
         </div>
 
         <div className="bg-[#1e1e1e] rounded-2xl p-6 space-y-4">
+          {justReset && (
+            <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 p-3 text-sm text-emerald-400">
+              Password reset! Sign in with your new password.
+            </div>
+          )}
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div className="space-y-1.5">
               <label className="text-sm text-gray-300">Email</label>
@@ -86,7 +92,10 @@ function AdminLoginForm() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-sm text-gray-300">Password</label>
+              <div className="flex items-center justify-between">
+                <label className="text-sm text-gray-300">Password</label>
+                <Link href="/forgot-password" className="text-xs text-gray-500 hover:text-gray-300">Forgot password?</Link>
+              </div>
               <div className="relative">
                 <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
                   <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">

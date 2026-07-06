@@ -117,6 +117,10 @@ model User {
   mfaEnabled    Boolean @default(false)
   mfaSecret     String?
 
+  // Password reset (hashed token + expiry)
+  resetTokenHash      String?
+  resetTokenExpiresAt DateTime?
+
   // Buyer profile (optional)
   buyerProfile BuyerProfile?
 

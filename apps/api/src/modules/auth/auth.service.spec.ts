@@ -14,7 +14,8 @@ function makeService() {
   };
   const jwt = { sign: vi.fn().mockReturnValue("token") };
   const config = { get: vi.fn().mockReturnValue("secret") };
-  const service = new AuthService(db as never, jwt as never, config as never);
+  const notifications = { sendPasswordReset: vi.fn().mockResolvedValue(undefined) };
+  const service = new AuthService(db as never, jwt as never, config as never, notifications as never);
   return { service, db };
 }
 

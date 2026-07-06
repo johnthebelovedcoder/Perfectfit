@@ -87,6 +87,29 @@ export class NotificationsService {
     }
   }
 
+  /** Sends a password-reset link. */
+  async sendPasswordReset(to: string, link: string) {
+    const html = `
+      <h2>Reset your Perfect Fit password</h2>
+      <p>We received a request to reset your password. Click the button below to choose a new one — this link expires in 1 hour.</p>
+      <p><a href="${link}" style="display:inline-block;background:#111;color:#fff;padding:12px 20px;border-radius:10px;text-decoration:none;font-weight:600">Reset password</a></p>
+      <p style="color:#666;font-size:13px">If you didn't request this, you can safely ignore this email — your password won't change.</p>
+      <p style="color:#999;font-size:12px">Or paste this link into your browser:<br>${link}</p>
+    `;
+    try {
+      const { error } = await this.resend.emails.send({
+        from: this.from,
+        to,
+        subject: "Reset your Perfect Fit password",
+        html,
+        replyTo: "fgsperfectfit@gmail.com",
+      });
+      if (error) this.logger.error(`Password reset email failed to ${to}: ${error.message}`);
+    } catch (e) {
+      this.logger.error(`Password reset email send failed to ${to}: ${e instanceof Error ? e.message : e}`);
+    }
+  }
+
   async handleSubmissionReceived(submissionId: string, sellerId: string) {
     const submission = await this.db.submission.findUnique({
       where: { id: submissionId },

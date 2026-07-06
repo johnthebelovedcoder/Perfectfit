@@ -9,7 +9,9 @@ import { ConfigService } from "@nestjs/config";
 import * as bcrypt from "bcryptjs";
 import { authenticator } from "otplib";
 import * as QRCode from "qrcode";
+import { createHash, randomBytes } from "crypto";
 import { DatabaseService } from "../../common/database/database.service";
+import { NotificationsService } from "../notifications/notifications.service";
 import { encryptField } from "../../common/crypto/field-crypto";
 import type { RegisterSeller, RegisterBuyer, Login, SessionUser } from "@thread/types";
 
@@ -20,7 +22,8 @@ export class AuthService {
   constructor(
     private db: DatabaseService,
     private jwt: JwtService,
-    private config: ConfigService
+    private config: ConfigService,
+    private notifications: NotificationsService
   ) {}
 
   async registerBuyer(dto: RegisterBuyer) {
@@ -170,6 +173,48 @@ export class AuthService {
     const passwordHash = await bcrypt.hash(newPassword, 12);
     await this.db.user.update({ where: { id: userId }, data: { passwordHash } });
     return { changed: true };
+  }
+
+  /**
+   * Emails a reset link if the address maps to an active account. Always returns
+   * { ok: true } so callers can't probe which emails are registered.
+   */
+  async forgotPassword(email: string) {
+    const user = await this.db.withRetry(() => this.db.user.findUnique({ where: { email } }));
+    if (user && !user.deletedAt) {
+      const rawToken = randomBytes(32).toString("hex");
+      const resetTokenHash = createHash("sha256").update(rawToken).digest("hex");
+      const resetTokenExpiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+      await this.db.user.update({ where: { id: user.id }, data: { resetTokenHash, resetTokenExpiresAt } });
+
+      const base =
+        user.role === "ADMIN"
+          ? this.config.get<string>("NEXT_PUBLIC_ADMIN_URL")
+          : user.role === "SELLER"
+            ? this.config.get<string>("NEXT_PUBLIC_SELLER_URL")
+            : this.config.get<string>("NEXT_PUBLIC_STOREFRONT_URL");
+      const path = user.role === "BUYER" ? "/auth/reset-password" : "/reset-password";
+      const link = `${base ?? ""}${path}?token=${rawToken}`;
+      await this.notifications.sendPasswordReset(user.email, link);
+    }
+    return { ok: true };
+  }
+
+  /** Consumes a reset token and sets a new password. */
+  async resetPassword(token: string, newPassword: string) {
+    const resetTokenHash = createHash("sha256").update(token).digest("hex");
+    const user = await this.db.user.findFirst({
+      where: { resetTokenHash, resetTokenExpiresAt: { gt: new Date() } },
+    });
+    if (!user) {
+      throw new BadRequestException("This reset link is invalid or has expired. Please request a new one.");
+    }
+    const passwordHash = await bcrypt.hash(newPassword, 12);
+    await this.db.user.update({
+      where: { id: user.id },
+      data: { passwordHash, resetTokenHash: null, resetTokenExpiresAt: null },
+    });
+    return { ok: true };
   }
 
   private issueTokens(user: { id: string; email: string; role: string; emailVerified: boolean; mfaEnabled: boolean }) {

@@ -18,6 +18,11 @@ const ChangePasswordSchema = z.object({
   currentPassword: z.string().min(1),
   newPassword: z.string().min(8, "Password must be at least 8 characters"),
 });
+const ForgotPasswordSchema = z.object({ email: z.string().email() });
+const ResetPasswordSchema = z.object({
+  token: z.string().min(1),
+  newPassword: z.string().min(8, "Password must be at least 8 characters"),
+});
 
 @Controller("auth")
 export class AuthController {
@@ -57,6 +62,28 @@ export class AuthController {
     @Body(new ZodValidationPipe(RefreshTokenSchema)) body: { refreshToken: string }
   ) {
     const result = await this.authService.refreshToken(body.refreshToken);
+    return { data: result };
+  }
+
+  @Public()
+  @Throttle({ default: { ttl: 60_000, limit: 5 } })
+  @Post("forgot-password")
+  @HttpCode(200)
+  async forgotPassword(
+    @Body(new ZodValidationPipe(ForgotPasswordSchema)) body: { email: string }
+  ) {
+    const result = await this.authService.forgotPassword(body.email);
+    return { data: result };
+  }
+
+  @Public()
+  @Throttle({ default: { ttl: 60_000, limit: 10 } })
+  @Post("reset-password")
+  @HttpCode(200)
+  async resetPassword(
+    @Body(new ZodValidationPipe(ResetPasswordSchema)) body: { token: string; newPassword: string }
+  ) {
+    const result = await this.authService.resetPassword(body.token, body.newPassword);
     return { data: result };
   }
 

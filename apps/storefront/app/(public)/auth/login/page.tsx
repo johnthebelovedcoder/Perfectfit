@@ -13,6 +13,7 @@ function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const justRegistered = searchParams.get("registered") === "1";
+  const justReset = searchParams.get("reset") === "1";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -59,6 +60,13 @@ function LoginForm() {
           </div>
         )}
 
+        {justReset && (
+          <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 mb-5 flex items-center gap-3 text-sm text-emerald-700">
+            <CheckCircle className="h-4 w-4 shrink-0" />
+            Password reset! Sign in with your new password.
+          </div>
+        )}
+
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
@@ -77,10 +85,13 @@ function LoginForm() {
             </div>
 
             <div>
-              <div className="mb-1.5">
+              <div className="flex items-center justify-between mb-1.5">
                 <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide">
                   Password
                 </label>
+                <Link href="/auth/forgot-password" className="text-xs text-gray-400 hover:text-gray-700">
+                  Forgot password?
+                </Link>
               </div>
               <div className="relative">
                 <input
