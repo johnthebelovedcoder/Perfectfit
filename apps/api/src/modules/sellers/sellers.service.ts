@@ -44,6 +44,42 @@ export class SellersService {
     };
   }
 
+  /** Seller-scoped payout ledger: every payout for the seller plus paid/pending totals. */
+  async getMyPayouts(user: SessionUser) {
+    const profile = await this.db.sellerProfile.findUnique({ where: { userId: user.id }, select: { id: true } });
+    if (!profile) throw new NotFoundException("Seller profile not found");
+    const sellerId = profile.id;
+
+    const [payouts, completed, pending] = await Promise.all([
+      this.db.payout.findMany({
+        where: { sellerId },
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          amountKobo: true,
+          status: true,
+          createdAt: true,
+          processedAt: true,
+          settlementDueAt: true,
+          transferReference: true,
+          item: { select: { title: true, slug: true, photos: true } },
+        },
+      }),
+      this.db.payout.aggregate({ where: { sellerId, status: "COMPLETED" }, _sum: { amountKobo: true }, _count: true }),
+      this.db.payout.aggregate({ where: { sellerId, status: { in: ["QUEUED", "PROCESSING"] } }, _sum: { amountKobo: true }, _count: true }),
+    ]);
+
+    return {
+      payouts,
+      summary: {
+        totalPaidKobo: completed._sum.amountKobo ?? 0,
+        paidCount: completed._count,
+        pendingKobo: pending._sum.amountKobo ?? 0,
+        pendingCount: pending._count,
+      },
+    };
+  }
+
   /**
    * Seller-scoped analytics for the seller portal. Flow metrics respect [from, to];
    * current inventory / pending payout are live snapshots. Money in integer cents.

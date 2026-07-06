@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, BarChart3, PlusCircle, Package, X } from "lucide-react";
+import { LayoutDashboard, BarChart3, PlusCircle, Package, Wallet, X } from "lucide-react";
 
 const NAV = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/submissions", label: "My Submissions", icon: Package },
+  { href: "/payouts", label: "Payouts", icon: Wallet },
   { href: "/submissions/new", label: "Submit Item", icon: PlusCircle },
 ];
 

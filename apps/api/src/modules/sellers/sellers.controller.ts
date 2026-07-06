@@ -52,6 +52,13 @@ export class SellersController {
     return { data };
   }
 
+  @Get("me/payouts")
+  @Roles("SELLER")
+  async getMyPayouts(@CurrentUser() user: SessionUser) {
+    const data = await this.sellersService.getMyPayouts(user);
+    return { data };
+  }
+
   @Patch("me")
   @Roles("SELLER")
   async updateMyProfile(
