@@ -46,6 +46,7 @@ export class AuthService {
       },
     }));
 
+    await this.sendVerification(user).catch(() => {});
     return this.issueTokens(user);
   }
 
@@ -76,6 +77,7 @@ export class AuthService {
       include: { sellerProfile: true },
     }));
 
+    await this.sendVerification(user).catch(() => {});
     return this.issueTokens(user);
   }
 
@@ -214,6 +216,47 @@ export class AuthService {
       where: { id: user.id },
       data: { passwordHash, resetTokenHash: null, resetTokenExpiresAt: null },
     });
+    return { ok: true };
+  }
+
+  /** Generates + emails an email-verification link (24h). */
+  private async sendVerification(user: { id: string; email: string; role: string }) {
+    const rawToken = randomBytes(32).toString("hex");
+    const verifyTokenHash = createHash("sha256").update(rawToken).digest("hex");
+    const verifyTokenExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+    await this.db.user.update({ where: { id: user.id }, data: { verifyTokenHash, verifyTokenExpiresAt } });
+
+    const base =
+      user.role === "SELLER"
+        ? this.config.get<string>("NEXT_PUBLIC_SELLER_URL")
+        : this.config.get<string>("NEXT_PUBLIC_STOREFRONT_URL");
+    const path = user.role === "BUYER" ? "/auth/verify-email" : "/verify-email";
+    const link = `${base ?? ""}${path}?token=${rawToken}`;
+    await this.notifications.sendVerificationEmail(user.email, link);
+  }
+
+  /** Consumes an email-verification token. */
+  async verifyEmail(token: string) {
+    const verifyTokenHash = createHash("sha256").update(token).digest("hex");
+    const user = await this.db.user.findFirst({
+      where: { verifyTokenHash, verifyTokenExpiresAt: { gt: new Date() } },
+    });
+    if (!user) {
+      throw new BadRequestException("This verification link is invalid or has expired.");
+    }
+    await this.db.user.update({
+      where: { id: user.id },
+      data: { emailVerified: true, verifyTokenHash: null, verifyTokenExpiresAt: null },
+    });
+    return { ok: true };
+  }
+
+  /** Re-sends the verification email for a logged-in, still-unverified user. */
+  async resendVerification(userId: string) {
+    const user = await this.db.user.findUnique({ where: { id: userId } });
+    if (!user) throw new UnauthorizedException();
+    if (user.emailVerified) return { ok: true, alreadyVerified: true };
+    await this.sendVerification(user);
     return { ok: true };
   }
 

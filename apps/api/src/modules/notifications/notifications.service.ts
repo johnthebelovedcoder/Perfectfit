@@ -110,6 +110,28 @@ export class NotificationsService {
     }
   }
 
+  /** Sends an email-verification link. */
+  async sendVerificationEmail(to: string, link: string) {
+    const html = `
+      <h2>Confirm your email</h2>
+      <p>Welcome to Perfect Fit! Please confirm your email address to secure your account — this link expires in 24 hours.</p>
+      <p><a href="${link}" style="display:inline-block;background:#111;color:#fff;padding:12px 20px;border-radius:10px;text-decoration:none;font-weight:600">Confirm email</a></p>
+      <p style="color:#999;font-size:12px">Or paste this link into your browser:<br>${link}</p>
+    `;
+    try {
+      const { error } = await this.resend.emails.send({
+        from: this.from,
+        to,
+        subject: "Confirm your Perfect Fit email",
+        html,
+        replyTo: "fgsperfectfit@gmail.com",
+      });
+      if (error) this.logger.error(`Verification email failed to ${to}: ${error.message}`);
+    } catch (e) {
+      this.logger.error(`Verification email send failed to ${to}: ${e instanceof Error ? e.message : e}`);
+    }
+  }
+
   async handleSubmissionReceived(submissionId: string, sellerId: string) {
     const submission = await this.db.submission.findUnique({
       where: { id: submissionId },

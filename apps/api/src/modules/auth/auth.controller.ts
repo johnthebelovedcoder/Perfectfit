@@ -23,6 +23,7 @@ const ResetPasswordSchema = z.object({
   token: z.string().min(1),
   newPassword: z.string().min(8, "Password must be at least 8 characters"),
 });
+const VerifyEmailSchema = z.object({ token: z.string().min(1) });
 
 @Controller("auth")
 export class AuthController {
@@ -84,6 +85,25 @@ export class AuthController {
     @Body(new ZodValidationPipe(ResetPasswordSchema)) body: { token: string; newPassword: string }
   ) {
     const result = await this.authService.resetPassword(body.token, body.newPassword);
+    return { data: result };
+  }
+
+  @Public()
+  @Throttle({ default: { ttl: 60_000, limit: 10 } })
+  @Post("verify-email")
+  @HttpCode(200)
+  async verifyEmail(
+    @Body(new ZodValidationPipe(VerifyEmailSchema)) body: { token: string }
+  ) {
+    const result = await this.authService.verifyEmail(body.token);
+    return { data: result };
+  }
+
+  @Throttle({ default: { ttl: 60_000, limit: 3 } })
+  @Post("resend-verification")
+  @HttpCode(200)
+  async resendVerification(@CurrentUser() user: SessionUser) {
+    const result = await this.authService.resendVerification(user.id);
     return { data: result };
   }
 

@@ -121,6 +121,10 @@ model User {
   resetTokenHash      String?
   resetTokenExpiresAt DateTime?
 
+  // Email verification (hashed token + expiry)
+  verifyTokenHash      String?
+  verifyTokenExpiresAt DateTime?
+
   // Buyer profile (optional)
   buyerProfile BuyerProfile?
 
