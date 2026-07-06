@@ -32,12 +32,13 @@ export default function NewSubmissionPage() {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [error, setError] = useState<string | null>(null);
+  const [payoutInput, setPayoutInput] = useState("");
 
   const { data: profile, isLoading: profileLoading } = useQuery({
     queryKey: ["seller-profile"],
     queryFn: () => api.get<{ isVerified: boolean }>("/sellers/me"),
   });
-  const isVerified = (profile as any)?.isVerified ?? false;
+  const isVerified = profile?.isVerified ?? false;
 
   const form = useForm<CreateSubmission>({
     resolver: zodResolver(CreateSubmissionSchema),
@@ -92,7 +93,7 @@ export default function NewSubmissionPage() {
   }
 
   return (
-    <div className="p-8 max-w-2xl">
+    <div className="p-4 sm:p-8 max-w-2xl">
       {/* Step indicator */}
       <div className="flex items-center gap-0 mb-10">
         {STEPS.map((s, i) => (
@@ -234,8 +235,18 @@ export default function NewSubmissionPage() {
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-gray-700">Your Desired Payout ($) *</label>
                 <input type="number" placeholder="e.g. 50.00" step="0.01" min="0"
-                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-gray-200"
-                  {...register("desiredPayoutPrice", { valueAsNumber: true, setValueAs: (v: string) => Math.round(parseFloat(v) * 100) })} />
+                  value={payoutInput}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setPayoutInput(v);
+                    const dollars = parseFloat(v);
+                    setValue(
+                      "desiredPayoutPrice",
+                      Number.isFinite(dollars) ? Math.round(dollars * 100) : (Number.NaN as unknown as number),
+                      { shouldValidate: true },
+                    );
+                  }}
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-gray-200" />
                 <p className="text-xs text-gray-400">Enter the dollar amount you'd like to receive as payout. This is negotiable.</p>
                 {errors.desiredPayoutPrice && <p className="text-xs text-red-500">{errors.desiredPayoutPrice.message}</p>}
               </div>
@@ -249,12 +260,12 @@ export default function NewSubmissionPage() {
                 <p className="text-sm text-gray-500 mt-0.5">Our team will review within 48 hours and get back to you.</p>
               </div>
               <div className="rounded-xl bg-gray-50 p-4 text-sm space-y-2">
-                <div className="flex justify-between"><span className="text-gray-500">Category</span><span className="font-medium">{watch("category")}</span></div>
+                <div className="flex justify-between"><span className="text-gray-500">Category</span><span className="font-medium">{category ? categoryLabel(category) : "—"}</span></div>
                 <div className="flex justify-between"><span className="text-gray-500">Item Type</span><span className="font-medium">{watch("itemType")}</span></div>
                 <div className="flex justify-between"><span className="text-gray-500">Size</span><span className="font-medium">{watch("size")}</span></div>
-                <div className="flex justify-between"><span className="text-gray-500">Condition</span><span className="font-medium">{watch("condition")}</span></div>
+                <div className="flex justify-between"><span className="text-gray-500">Condition</span><span className="font-medium">{CONDITIONS.find((c) => c.value === condition)?.label ?? condition}</span></div>
                 <div className="flex justify-between"><span className="text-gray-500">Photos</span><span className="font-medium">{photos.length} uploaded</span></div>
-                <div className="flex justify-between border-t border-gray-200 pt-2 mt-2"><span className="text-gray-500">Desired Payout</span><span className="font-semibold text-gray-900">{formatPrice(watch("desiredPayoutPrice") ?? 0)}</span></div>
+                <div className="flex justify-between border-t border-gray-200 pt-2 mt-2"><span className="text-gray-500">Desired Payout</span><span className="font-semibold text-gray-900">{formatPrice(watch("desiredPayoutPrice") || 0)}</span></div>
               </div>
             </div>
           )}

@@ -217,7 +217,7 @@ export default function DashboardPage() {
               <div className="divide-y divide-gray-50">
                 {recentSubs.map((s) => {
                   const photo = s.photos?.[0];
-                  const ref = `THR-${s.id.slice(-8).toUpperCase()}`;
+                  const ref = `PF-${s.id.slice(-8).toUpperCase()}`;
                   return (
                     <Link key={s.id} href={`/submissions/${s.id}`}
                       className="flex items-center gap-4 px-5 py-3.5 hover:bg-gray-50/60 transition-colors">

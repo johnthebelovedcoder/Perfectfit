@@ -186,7 +186,7 @@ export default function ProfilePage() {
   }
 
   if (isLoading) return (
-    <div className="p-8 space-y-6 max-w-3xl">
+    <div className="p-4 sm:p-8 space-y-6 max-w-3xl">
       <Skeleton className="h-8 w-40" />
       <div className="bg-white rounded-2xl p-6 space-y-4">
         <div className="flex gap-4"><Skeleton className="w-16 h-16 rounded-full" /><div className="space-y-2 flex-1"><Skeleton className="h-5 w-40" /><Skeleton className="h-3 w-24" /></div></div>
@@ -196,7 +196,7 @@ export default function ProfilePage() {
   );
 
   if (!profile) return (
-    <div className="p-8 text-sm text-gray-400">Could not load profile. Please try again.</div>
+    <div className="p-4 sm:p-8 text-sm text-gray-400">Could not load profile. Please try again.</div>
   );
 
   // Stats may be missing if the API hasn't been redeployed yet — provide safe defaults

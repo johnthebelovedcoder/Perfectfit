@@ -147,7 +147,7 @@ export default function SubmissionDetailPage({ params }: { params: { id: string 
       {mutationError}
     </div>
   ) : null;
-  const ref = `THR-${id.slice(-8).toUpperCase()}`;
+  const ref = `PF-${id.slice(-8).toUpperCase()}`;
 
   const timeline: Array<{ label: string; date: string | null; active: boolean }> = [
     { label: "Submitted",  date: sub.createdAt, active: true },
