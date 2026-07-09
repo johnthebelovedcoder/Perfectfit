@@ -112,21 +112,63 @@ export class OrdersService {
     const soldItemIds = order.orderItems.map((oi) => oi.itemId);
     const now = new Date();
 
-    // Atomic: mark order paid + de-list items + advance submissions in one transaction
-    await this.db.$transaction([
-      this.db.order.update({
+    // Atomically CLAIM every item (each item is unique / quantity 1). If any was
+    // already sold by a concurrent paid order, roll back so we never partially
+    // de-list, then refund this buyer — we can't fulfil an oversold order.
+    let oversold = false;
+    try {
+      await this.db.$transaction(async (tx) => {
+        const claim = await tx.item.updateMany({
+          where: { id: { in: soldItemIds }, soldAt: null, isLive: true },
+          data: { isLive: false, soldAt: now },
+        });
+        if (claim.count !== soldItemIds.length) {
+          oversold = true;
+          throw new Error("OVERSOLD"); // rolls the transaction back
+        }
+        await tx.order.update({
+          where: { id: orderId },
+          data: { paymentStatus: "PAID", paymentReference, paidAt: now, status: "PROCESSING" },
+        });
+        await tx.submission.updateMany({
+          where: { item: { id: { in: soldItemIds } } },
+          data: { status: "SOLD" as any },
+        });
+      });
+    } catch (err) {
+      if (!oversold) throw err;
+    }
+
+    if (oversold) {
+      this.logger.error(
+        `Order ${orderId}: one or more items were already sold by a concurrent order — refunding buyer`
+      );
+      let refunded = false;
+      try {
+        // The Stripe payment succeeded, so force the refund regardless of DB state.
+        await this.refundViaStripe(
+          { id: orderId, paymentStatus: "PAID", paymentReference },
+          order.totalAmountKobo
+        );
+        refunded = true;
+      } catch (err) {
+        this.logger.error(
+          `Auto-refund FAILED for oversold order ${orderId} — MANUAL REFUND REQUIRED: ${err instanceof Error ? err.message : err}`
+        );
+      }
+      await this.db.order.update({
         where: { id: orderId },
-        data: { paymentStatus: "PAID", paymentReference, paidAt: now, status: "PROCESSING" },
-      }),
-      this.db.item.updateMany({
-        where: { id: { in: soldItemIds } },
-        data: { isLive: false, soldAt: now },
-      }),
-      this.db.submission.updateMany({
-        where: { item: { id: { in: soldItemIds } } },
-        data: { status: "SOLD" as any },
-      }),
-    ]);
+        data: {
+          status: "CANCELLED",
+          paymentStatus: refunded ? "REFUNDED" : "PAID",
+          paymentReference,
+          paidAt: now,
+          refundAmountKobo: order.totalAmountKobo,
+          returnResolvedAt: new Date(),
+        },
+      });
+      return { confirmed: false, oversold: true, refunded };
+    }
 
     // Notify seller(s) — orderItems include item via repo.findById
     for (const oi of order.orderItems) {

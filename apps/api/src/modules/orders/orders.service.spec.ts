@@ -3,11 +3,17 @@ import { OrdersService } from "./orders.service";
 
 function makeService() {
   const repo = { findById: vi.fn(), updateStatus: vi.fn() };
-  const db = {
-    order: { update: vi.fn() },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const db: any = {
+    order: { update: vi.fn().mockResolvedValue({}) },
+    item: { updateMany: vi.fn().mockResolvedValue({ count: 0 }) },
+    submission: { updateMany: vi.fn().mockResolvedValue({}) },
     payout: { updateMany: vi.fn() },
-    $transaction: vi.fn().mockResolvedValue([]),
   };
+  // Support both interactive ($transaction(fn)) and array ($transaction([...])) forms.
+  db.$transaction = vi.fn().mockImplementation((arg: unknown) =>
+    typeof arg === "function" ? (arg as (tx: unknown) => unknown)(db) : Promise.all(arg as unknown[])
+  );
   const notificationQueue = { add: vi.fn() };
   const payoutQueue = { add: vi.fn() };
   // Dummy key so the Stripe client constructs; refunds are only exercised for PAID orders.
@@ -73,5 +79,47 @@ describe("OrdersService.processReturn", () => {
   it("rejects resolving an order with no active return", async () => {
     ctx.repo.findById.mockResolvedValue({ id: "o1", status: "DELIVERED", orderItems: [] });
     await expect(ctx.service.processReturn("o1", { approved: true })).rejects.toThrow(/No active return/);
+  });
+});
+
+describe("OrdersService.confirmPayment — concurrent double-sale", () => {
+  let ctx: ReturnType<typeof makeService>;
+  beforeEach(() => { ctx = makeService(); });
+
+  it("claims all items → marks PAID and notifies the seller", async () => {
+    ctx.repo.findById.mockResolvedValue({
+      id: "o1", paymentStatus: "PENDING",
+      orderItems: [{ itemId: "i1", item: { submissionId: "s1" } }],
+    });
+    ctx.db.item.updateMany.mockResolvedValue({ count: 1 }); // item was available
+
+    const res = await ctx.service.confirmPayment("o1", "pi_1");
+
+    expect(res).toEqual({ confirmed: true });
+    const soldJobs = ctx.notificationQueue.add.mock.calls.filter((c) => c[0] === "item-sold");
+    expect(soldJobs).toHaveLength(1);
+  });
+
+  it("item already sold by a concurrent order → refunds the buyer and cancels", async () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const refundCreate = vi.fn().mockResolvedValue({});
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (ctx.service as any).stripe = { refunds: { create: refundCreate } };
+    ctx.repo.findById.mockResolvedValue({
+      id: "o1", paymentStatus: "PENDING", totalAmountKobo: 5699,
+      orderItems: [{ itemId: "i1", item: { submissionId: "s1" } }],
+    });
+    ctx.db.item.updateMany.mockResolvedValue({ count: 0 }); // nothing left to claim
+
+    const res = await ctx.service.confirmPayment("o1", "pi_123");
+
+    expect(res).toMatchObject({ confirmed: false, oversold: true, refunded: true });
+    expect(refundCreate).toHaveBeenCalledWith(expect.objectContaining({ payment_intent: "pi_123", amount: 5699 }));
+    expect(ctx.db.order.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ status: "CANCELLED", paymentStatus: "REFUNDED" }) })
+    );
+    // The seller must NOT be told the item sold.
+    const soldJobs = ctx.notificationQueue.add.mock.calls.filter((c) => c[0] === "item-sold");
+    expect(soldJobs).toHaveLength(0);
   });
 });
