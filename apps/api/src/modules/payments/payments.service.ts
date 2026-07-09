@@ -1,6 +1,7 @@
 import { Injectable, BadRequestException, UnauthorizedException, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import Stripe = require("stripe");
+import { calculateShippingCents } from "@thread/utils";
 import { OrdersService } from "../orders/orders.service";
 
 @Injectable()
@@ -29,23 +30,42 @@ export class PaymentsService {
 
     const storefrontUrl = this.config.get<string>("NEXT_PUBLIC_STOREFRONT_URL");
 
+    const subtotal = order.orderItems.reduce((sum, oi) => sum + oi.priceKobo, 0);
+    const shipping = calculateShippingCents(subtotal);
+
+    const itemLineItems = order.orderItems.map((oi) => ({
+      quantity: 1,
+      price_data: {
+        currency: "usd",
+        unit_amount: oi.priceKobo, // integer cents
+        product_data: {
+          name: oi.item?.title ?? "Item",
+          ...(oi.item?.photos?.length ? { images: [oi.item.photos[0]!] } : {}),
+        },
+      },
+    }));
+
+    const shippingLineItem =
+      shipping > 0
+        ? [
+            {
+              quantity: 1,
+              price_data: {
+                currency: "usd",
+                unit_amount: shipping,
+                product_data: { name: "Shipping" },
+              },
+            },
+          ]
+        : [];
+
     const session = await this.stripe.checkout.sessions.create({
       // `embedded` is a stable Stripe feature; the pinned SDK's UiMode type lags behind.
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       ui_mode: "embedded" as any,
       mode: "payment",
       customer_email: order.email,
-      line_items: order.orderItems.map((oi) => ({
-        quantity: 1,
-        price_data: {
-          currency: "usd",
-          unit_amount: oi.priceKobo, // integer cents
-          product_data: {
-            name: oi.item?.title ?? "Item",
-            ...(oi.item?.photos?.length ? { images: [oi.item.photos[0]!] } : {}),
-          },
-        },
-      })),
+      line_items: [...itemLineItems, ...shippingLineItem],
       // The webhook trusts ONLY this server-set metadata, never client input.
       metadata: { orderId: order.id },
       payment_intent_data: { metadata: { orderId: order.id } },

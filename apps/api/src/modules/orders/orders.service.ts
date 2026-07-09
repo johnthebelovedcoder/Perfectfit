@@ -10,7 +10,7 @@ import type { Queue } from "bull";
 import { OrdersRepository } from "./orders.repository";
 import { DatabaseService } from "../../common/database/database.service";
 import { NOTIFICATION_QUEUE, PAYOUT_QUEUE, JOB_OPTS } from "../../queues/queue.constants";
-import { generateGuestToken } from "@thread/utils";
+import { generateGuestToken, calculateShippingCents } from "@thread/utils";
 import type { GuestCheckout, UpdateOrderStatus } from "@thread/types";
 
 const SETTLEMENT_DAYS = 7;
@@ -35,7 +35,9 @@ export class OrdersService {
       throw new BadRequestException("One or more items are unavailable");
     }
 
-    const totalAmountKobo = items.reduce((sum, item) => sum + item.retailPrice, 0);
+    const subtotalKobo = items.reduce((sum, item) => sum + item.retailPrice, 0);
+    const shippingKobo = calculateShippingCents(subtotalKobo);
+    const totalAmountKobo = subtotalKobo + shippingKobo;
     const guestToken = generateGuestToken();
 
     const order = await this.repo.create({

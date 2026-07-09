@@ -143,7 +143,7 @@ export default function SubmissionDetailPage({ params }: { params: { id: string 
 
   if (!sub) {
     return (
-      <div className="p-8">
+      <div className="p-4 sm:p-8">
         <div className="h-96 flex items-center justify-center text-gray-400">Loading...</div>
       </div>
     );

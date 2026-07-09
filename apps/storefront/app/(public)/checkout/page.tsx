@@ -12,7 +12,7 @@ import { Footer } from "@/components/shared/Footer";
 import { useCartStore } from "@/stores/cart.store";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { useAuth } from "@/lib/auth";
-import { getCloudinaryUrl } from "@thread/utils";
+import { getCloudinaryUrl, calculateShippingCents, FREE_SHIPPING_THRESHOLD_CENTS } from "@thread/utils";
 import { Price } from "@/components/shared/Price";
 import { api } from "@/lib/api";
 import { loadStripe } from "@stripe/stripe-js";
@@ -46,6 +46,8 @@ export default function CheckoutPage() {
   const [clientSecret, setClientSecret] = useState<string | null>(null);
 
   const subtotal = totalKobo();
+  const shipping = calculateShippingCents(subtotal);
+  const total = subtotal + shipping;
 
   const {
     register,
@@ -330,7 +332,7 @@ export default function CheckoutPage() {
                   Order Summary ({items.length} item{items.length !== 1 ? "s" : ""})
                 </span>
                 <div className="flex items-center gap-2">
-                  <Price cents={subtotal} className="text-sm font-bold" />
+                  <Price cents={total} className="text-sm font-bold" />
                   {orderSummaryOpen ? <ChevronUp className="h-4 w-4 text-gray-400" /> : <ChevronDown className="h-4 w-4 text-gray-400" />}
                 </div>
               </button>
@@ -375,11 +377,21 @@ export default function CheckoutPage() {
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-400">Shipping</span>
-                    <span className="text-gray-400">Calculated at next step</span>
+                    {shipping === 0 ? (
+                      <span className="font-medium text-emerald-600">FREE</span>
+                    ) : (
+                      <Price cents={shipping} className="font-medium text-gray-900" />
+                    )}
                   </div>
+                  {shipping > 0 && (
+                    <p className="text-[11px] text-gray-400">
+                      Free shipping on orders over{" "}
+                      <Price cents={FREE_SHIPPING_THRESHOLD_CENTS} className="text-[11px] text-gray-400" />.
+                    </p>
+                  )}
                   <div className="border-t border-gray-100 pt-3 flex justify-between">
                     <span className="font-bold text-gray-900">Total</span>
-                    <Price cents={subtotal} className="text-lg font-bold text-gray-900" />
+                    <Price cents={total} className="text-lg font-bold text-gray-900" />
                   </div>
                   <p className="text-[11px] text-gray-400 text-right">Charged in USD at checkout.</p>
                 </div>
@@ -398,7 +410,7 @@ export default function CheckoutPage() {
                     ? "Offline — reconnect to order"
                     : isSubmitting
                       ? "Preparing payment…"
-                      : <>Continue to Payment — <Price cents={subtotal} /></>}
+                      : <>Continue to Payment — <Price cents={total} /></>}
                 </button>
               )}
 
