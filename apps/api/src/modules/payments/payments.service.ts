@@ -59,19 +59,27 @@ export class PaymentsService {
           ]
         : [];
 
-    const session = await this.stripe.checkout.sessions.create({
-      // `embedded` is a stable Stripe feature; the pinned SDK's UiMode type lags behind.
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ui_mode: "embedded" as any,
-      mode: "payment",
-      customer_email: order.email,
-      line_items: [...itemLineItems, ...shippingLineItem],
-      // The webhook trusts ONLY this server-set metadata, never client input.
-      metadata: { orderId: order.id },
-      payment_intent_data: { metadata: { orderId: order.id } },
-      // Stripe redirects here after payment; the webhook is the source of truth.
-      return_url: `${storefrontUrl}/order/${order.guestToken}/track?placed=1`,
-    });
+    let session: Awaited<ReturnType<typeof this.stripe.checkout.sessions.create>>;
+    try {
+      session = await this.stripe.checkout.sessions.create({
+        // `embedded` is a stable Stripe feature; the pinned SDK's UiMode type lags behind.
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ui_mode: "embedded" as any,
+        mode: "payment",
+        customer_email: order.email,
+        line_items: [...itemLineItems, ...shippingLineItem],
+        // The webhook trusts ONLY this server-set metadata, never client input.
+        metadata: { orderId: order.id },
+        payment_intent_data: { metadata: { orderId: order.id } },
+        // Stripe redirects here after payment; the webhook is the source of truth.
+        return_url: `${storefrontUrl}/order/${order.guestToken}/track?placed=1`,
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      this.logger.error(`Stripe checkout.sessions.create failed for order ${order.id}: ${msg}`);
+      // Surface the real Stripe reason to the client instead of a generic 500.
+      throw new BadRequestException(`Could not start payment: ${msg}`);
+    }
 
     if (!session.client_secret) throw new BadRequestException("Failed to create checkout session");
     return { clientSecret: session.client_secret };
