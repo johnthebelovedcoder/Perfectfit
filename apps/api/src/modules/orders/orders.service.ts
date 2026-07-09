@@ -7,6 +7,8 @@ import {
 } from "@nestjs/common";
 import { InjectQueue } from "@nestjs/bull";
 import type { Queue } from "bull";
+import { ConfigService } from "@nestjs/config";
+import Stripe = require("stripe");
 import { OrdersRepository } from "./orders.repository";
 import { DatabaseService } from "../../common/database/database.service";
 import { NOTIFICATION_QUEUE, PAYOUT_QUEUE, JOB_OPTS } from "../../queues/queue.constants";
@@ -18,13 +20,46 @@ const SETTLEMENT_DAYS = 7;
 @Injectable()
 export class OrdersService {
   private readonly logger = new Logger(OrdersService.name);
+  private readonly stripe: Stripe.Stripe;
 
   constructor(
     private repo: OrdersRepository,
     private db: DatabaseService,
+    private config: ConfigService,
     @InjectQueue(NOTIFICATION_QUEUE) private notificationQueue: Queue,
     @InjectQueue(PAYOUT_QUEUE) private payoutQueue: Queue
-  ) {}
+  ) {
+    this.stripe = new Stripe(this.config.get<string>("STRIPE_SECRET_KEY")!);
+  }
+
+  /**
+   * Issue a Stripe refund against the order's payment intent. No-op for unpaid
+   * orders. Throws if Stripe rejects — callers must refund BEFORE writing
+   * REFUNDED/CANCELLED so a failure leaves the order in its prior state.
+   */
+  private async refundViaStripe(
+    order: { id: string; paymentStatus: string; paymentReference: string | null },
+    amountKobo?: number
+  ) {
+    if (order.paymentStatus !== "PAID" || !order.paymentReference) return;
+    // paymentReference holds the PaymentIntent id set by the webhook.
+    if (!order.paymentReference.startsWith("pi_")) {
+      this.logger.error(
+        `Order ${order.id}: paymentReference "${order.paymentReference}" is not a PaymentIntent; refund must be done manually in Stripe`
+      );
+      throw new BadRequestException("Automatic refund unavailable — please refund this order manually in Stripe.");
+    }
+    try {
+      await this.stripe.refunds.create({
+        payment_intent: order.paymentReference,
+        ...(amountKobo != null ? { amount: amountKobo } : {}),
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      this.logger.error(`Stripe refund failed for order ${order.id}: ${msg}`);
+      throw new BadRequestException(`Refund could not be processed: ${msg}`);
+    }
+  }
 
   async createGuestOrder(dto: GuestCheckout) {
     const items = await this.db.withRetry(() => this.db.item.findMany({
@@ -148,6 +183,38 @@ export class OrdersService {
       );
     }
 
+    // Cancellation: refund the buyer (if paid), relist the items, and void any
+    // queued payouts. Refund happens first so a Stripe failure aborts the cancel.
+    if (dto.status === "CANCELLED") {
+      await this.refundViaStripe(order);
+      const itemIds = order.orderItems.map((oi) => oi.itemId);
+      await this.db.$transaction([
+        this.db.order.update({
+          where: { id },
+          data: {
+            status: "CANCELLED",
+            ...(order.paymentStatus === "PAID"
+              ? { refundAmountKobo: order.totalAmountKobo, returnResolvedAt: new Date() }
+              : {}),
+          },
+        }),
+        // Put the items back on sale.
+        this.db.item.updateMany({
+          where: { id: { in: itemIds } },
+          data: { isLive: true, soldAt: null },
+        }),
+        this.db.submission.updateMany({
+          where: { item: { id: { in: itemIds } } },
+          data: { status: "LIVE" as any },
+        }),
+        this.db.payout.updateMany({
+          where: { itemId: { in: itemIds }, status: "QUEUED" },
+          data: { status: "FAILED" },
+        }),
+      ]);
+      return this.repo.findById(id);
+    }
+
     const updated = await this.repo.updateStatus(id, {
       status: dto.status,
       ...(dto.trackingNumber ? { trackingNumber: dto.trackingNumber } : {}),
@@ -217,6 +284,9 @@ export class OrdersService {
 
     if (resolution.approved) {
       const soldItemIds = order.orderItems.map((oi) => oi.itemId);
+      const refundKobo = resolution.refundAmountKobo ?? order.totalAmountKobo;
+      // Refund first — if Stripe rejects, the order stays RETURN_REQUESTED.
+      await this.refundViaStripe(order, refundKobo);
       await this.db.$transaction([
         this.db.order.update({
           where: { id },

@@ -10,7 +10,9 @@ function makeService() {
   };
   const notificationQueue = { add: vi.fn() };
   const payoutQueue = { add: vi.fn() };
-  const service = new OrdersService(repo as never, db as never, notificationQueue as never, payoutQueue as never);
+  // Dummy key so the Stripe client constructs; refunds are only exercised for PAID orders.
+  const config = { get: vi.fn().mockReturnValue("sk_test_dummy") };
+  const service = new OrdersService(repo as never, db as never, config as never, notificationQueue as never, payoutQueue as never);
   return { service, repo, db, notificationQueue, payoutQueue };
 }
 
