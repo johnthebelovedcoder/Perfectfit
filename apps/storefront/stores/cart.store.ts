@@ -3,6 +3,8 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { CatalogueItem } from "@thread/types";
+import { api } from "@/lib/api";
+import { getAuth } from "@/lib/auth";
 
 interface CartItem {
   item: CatalogueItem;
@@ -15,6 +17,8 @@ interface CartStore {
   removeItem: (id: string) => void;
   clearCart: () => void;
   totalKobo: () => number;
+  /** Merge local cart into the account cart, then adopt the server result. */
+  syncFromServer: () => Promise<void>;
 }
 
 export const useCartStore = create<CartStore>()(
@@ -26,11 +30,28 @@ export const useCartStore = create<CartStore>()(
         set((state) => ({
           items: [...state.items, { item, addedAt: Date.now() }],
         }));
+        // Persist to the account when signed in (fire-and-forget).
+        if (getAuth()) void api.post(`/me/cart/${item.id}`, {}).catch(() => {});
       },
-      removeItem: (id) =>
-        set((state) => ({ items: state.items.filter((i) => i.item.id !== id) })),
-      clearCart: () => set({ items: [] }),
+      removeItem: (id) => {
+        set((state) => ({ items: state.items.filter((i) => i.item.id !== id) }));
+        if (getAuth()) void api.del(`/me/cart/${id}`).catch(() => {});
+      },
+      clearCart: () => {
+        set({ items: [] });
+        if (getAuth()) void api.del("/me/cart").catch(() => {});
+      },
       totalKobo: () => get().items.reduce((sum, i) => sum + i.item.retailPrice, 0),
+      syncFromServer: async () => {
+        if (!getAuth()) return;
+        const localIds = get().items.map((i) => i.item.id);
+        try {
+          const items = await api.post<CatalogueItem[]>("/me/cart/merge", { itemIds: localIds });
+          set({ items: items.map((item) => ({ item, addedAt: Date.now() })) });
+        } catch {
+          // Offline / transient — keep the local cart as-is.
+        }
+      },
     }),
     {
       name: "perfect-fit-cart",

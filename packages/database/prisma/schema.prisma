@@ -140,8 +140,39 @@ model User {
   // Sessions (Better Auth)
   sessions Session[]
 
+  // Account-synced cart & wishlist (persist across devices)
+  savedCartItems     SavedCartItem[]
+  savedWishlistItems SavedWishlistItem[]
+
   @@index([email])
   @@index([role])
+}
+
+// Server-side cart & wishlist, synced from the storefront's local store on
+// login. itemId is a plain reference (no FK) so a sold/de-listed item simply
+// drops out when we hydrate against live Items.
+model SavedCartItem {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  itemId String
+
+  @@unique([userId, itemId])
+  @@index([userId])
+}
+
+model SavedWishlistItem {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  itemId String
+
+  @@unique([userId, itemId])
+  @@index([userId])
 }
 
 model Session {

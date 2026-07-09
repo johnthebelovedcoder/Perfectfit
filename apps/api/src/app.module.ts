@@ -16,6 +16,7 @@ import { SearchModule } from "./modules/search/search.module";
 import { UploadsModule } from "./modules/uploads/uploads.module";
 import { ReviewsModule } from "./modules/reviews/reviews.module";
 import { AdminModule } from "./modules/admin/admin.module";
+import { SavedModule } from "./modules/saved/saved.module";
 import { HealthModule } from "./modules/health/health.module";
 import { DatabaseModule } from "./common/database/database.module";
 import { QueuesModule } from "./queues/queues.module";
@@ -44,6 +45,7 @@ import { QueuesModule } from "./queues/queues.module";
     UploadsModule,
     ReviewsModule,
     AdminModule,
+    SavedModule,
     HealthModule,
   ],
   providers: [

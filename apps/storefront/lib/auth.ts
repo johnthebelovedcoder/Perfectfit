@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 
 const KEY = "pf_auth";
-const EVENT = "pf-auth-change";
+export const AUTH_EVENT = "pf-auth-change";
+const EVENT = AUTH_EVENT;
 
 export interface AuthUser {
   id: string;
