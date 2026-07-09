@@ -1,4 +1,6 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
+import Stripe = require("stripe");
 import { DatabaseService } from "../../common/database/database.service";
 import { encryptField, decryptField } from "../../common/crypto/field-crypto";
 import { buildTimeBuckets } from "../../common/analytics/time-buckets";
@@ -6,7 +8,67 @@ import type { UpdateSellerProfile, SessionUser } from "@thread/types";
 
 @Injectable()
 export class SellersService {
-  constructor(private db: DatabaseService) {}
+  private readonly stripe: Stripe.Stripe;
+
+  constructor(
+    private db: DatabaseService,
+    private config: ConfigService
+  ) {
+    this.stripe = new Stripe(this.config.get<string>("STRIPE_SECRET_KEY")!);
+  }
+
+  /**
+   * Create (once) the seller's Stripe Connect Express account and return a hosted
+   * onboarding link. Stripe verifies bank + identity — we never store bank PII for
+   * Connect sellers.
+   */
+  async createConnectLink(user: SessionUser) {
+    const profile = await this.db.sellerProfile.findUnique({
+      where: { userId: user.id },
+      select: { id: true, stripeAccountId: true, user: { select: { email: true } } },
+    });
+    if (!profile) throw new NotFoundException("Seller profile not found");
+
+    let accountId = profile.stripeAccountId;
+    if (!accountId) {
+      const account = await this.stripe.accounts.create({
+        type: "express",
+        email: profile.user.email,
+        business_type: "individual",
+        capabilities: { transfers: { requested: true } },
+        metadata: { sellerId: profile.id },
+      });
+      accountId = account.id;
+      await this.db.sellerProfile.update({ where: { id: profile.id }, data: { stripeAccountId: accountId } });
+    }
+
+    const base = this.config.get<string>("NEXT_PUBLIC_SELLER_URL") ?? "";
+    const link = await this.stripe.accountLinks.create({
+      account: accountId,
+      refresh_url: `${base}/profile?connect=refresh`,
+      return_url: `${base}/profile?connect=done`,
+      type: "account_onboarding",
+    });
+    return { url: link.url };
+  }
+
+  /** Verification/payout status of the seller's connected account. */
+  async getConnectStatus(user: SessionUser) {
+    const profile = await this.db.sellerProfile.findUnique({
+      where: { userId: user.id },
+      select: { stripeAccountId: true },
+    });
+    if (!profile?.stripeAccountId) {
+      return { connected: false, payoutsEnabled: false, detailsSubmitted: false, disabledReason: null };
+    }
+    const account = await this.stripe.accounts.retrieve(profile.stripeAccountId);
+    return {
+      connected: true,
+      payoutsEnabled: account.payouts_enabled,
+      detailsSubmitted: account.details_submitted,
+      disabledReason: account.requirements?.disabled_reason ?? null,
+    };
+  }
 
   async getProfile(user: SessionUser) {
     const profile = await this.db.sellerProfile.findUnique({

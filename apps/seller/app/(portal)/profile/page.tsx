@@ -146,8 +146,7 @@ export default function ProfilePage() {
   const qc = useQueryClient();
   const [editing, setEditing] = useState<EditSection>(null);
   const [personal, setPersonal] = useState({ firstName: "", lastName: "", phone: "", city: "" });
-  const [payout, setPayout] = useState({ bankName: "", bankAccountName: "", bankAccountNumber: "" });
-  const [showAccNumber, setShowAccNumber] = useState(false);
+  const [connecting, setConnecting] = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ["my-profile"],
@@ -165,13 +164,20 @@ export default function ProfilePage() {
     },
   });
 
-  const payoutMutation = useMutation({
-    mutationFn: (dto: Record<string, string>) => api.patch<SellerProfile>("/sellers/me", dto),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ["my-profile"] });
-      setEditing(null);
-    },
+  const { data: connectStatus } = useQuery({
+    queryKey: ["connect-status"],
+    queryFn: () => api.get<{ connected: boolean; payoutsEnabled: boolean; detailsSubmitted: boolean }>("/sellers/me/connect/status"),
   });
+
+  async function startConnect() {
+    setConnecting(true);
+    try {
+      const { url } = await api.post<{ url: string }>("/sellers/me/connect", {});
+      window.location.href = url;
+    } catch {
+      setConnecting(false);
+    }
+  }
 
   function startEditPersonal() {
     if (!profile) return;
@@ -179,11 +185,6 @@ export default function ProfilePage() {
     setEditing("personal");
   }
 
-  function startEditPayout() {
-    if (!profile) return;
-    setPayout({ bankName: profile.bankName, bankAccountName: profile.bankAccountName, bankAccountNumber: "" });
-    setEditing("payout");
-  }
 
   if (isLoading) return (
     <div className="p-4 sm:p-8 space-y-6 max-w-3xl">
@@ -315,94 +316,48 @@ export default function ProfilePage() {
         )}
       </div>
 
-      {/* Payout Details */}
+      {/* Payout Account — Stripe Connect */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-        <div className="flex items-center justify-between mb-5">
-          <div>
-            <p className="font-semibold text-gray-900">Payout Details</p>
-            <p className="text-xs text-gray-400 mt-0.5">Where we send your money when an item sells</p>
-          </div>
-          {editing !== "payout" && (
-            <button onClick={startEditPayout}
-              className="flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-gray-900 border border-gray-200 rounded-lg px-3 py-1.5 hover:bg-gray-50 transition-colors">
-              <Pencil className="h-3 w-3" /> Edit
-            </button>
-          )}
+        <div className="mb-4">
+          <p className="font-semibold text-gray-900">Payout Account</p>
+          <p className="text-xs text-gray-400 mt-0.5">Connect your bank securely through Stripe to receive payouts</p>
         </div>
 
-        {editing === "payout" ? (
-          <div className="space-y-4">
-            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-start gap-2 text-xs text-amber-700">
-              <Lock className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-              <span>The <strong>Account Name</strong> must exactly match your registered name: <strong>{profile.firstName} {profile.lastName}</strong>. Mismatched accounts delay payouts.</span>
+        {connectStatus?.payoutsEnabled ? (
+          <div className="flex items-center gap-3 bg-emerald-50 border border-emerald-200 rounded-xl p-4">
+            <CheckCircle className="h-5 w-5 text-emerald-500 shrink-0" />
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-emerald-800">Payout account connected & verified</p>
+              <p className="text-xs text-emerald-700 mt-0.5">Stripe verified your bank and identity — you&apos;re ready to be paid.</p>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <EditField label="Bank Name" value={payout.bankName} onChange={(v) => setPayout((p) => ({ ...p, bankName: v }))} placeholder="e.g. Chase, Barclays" />
-              <EditField
-                label="Account Name"
-                value={payout.bankAccountName}
-                onChange={(v) => setPayout((p) => ({ ...p, bankAccountName: v }))}
-                placeholder={`${profile.firstName} ${profile.lastName}`}
-                hint="Must match your legal name"
-              />
-              <EditField
-                label="Account Number"
-                value={payout.bankAccountNumber}
-                onChange={(v) => setPayout((p) => ({ ...p, bankAccountNumber: v }))}
-                type="password"
-                placeholder="Enter account number"
-                hint="Stored securely"
-              />
-            </div>
-            {payoutMutation.isError && <p className="text-xs text-red-500">{(payoutMutation.error as Error).message}</p>}
-            <div className="flex gap-2 pt-1">
-              <button
-                onClick={() => {
-                  const trimmed = payout.bankAccountName.trim();
-                  const fullName = `${profile.firstName} ${profile.lastName}`.toLowerCase();
-                  if (trimmed && trimmed.toLowerCase() !== fullName) {
-                    if (!confirm(`Account name "${trimmed}" doesn't exactly match your name "${profile.firstName} ${profile.lastName}". Save anyway?`)) return;
-                  }
-                  // Strip empty strings — bankAccountNumber intentionally cleared for security
-                  const dto = Object.fromEntries(
-                    Object.entries(payout).filter(([, v]) => v !== "")
-                  ) as Record<string, string>;
-                  payoutMutation.mutate(dto);
-                }}
-                disabled={payoutMutation.isPending}
-                className="flex items-center gap-1.5 bg-gray-900 text-white text-sm font-medium px-4 py-2 rounded-xl hover:bg-black disabled:opacity-60 transition-colors">
-                <Check className="h-3.5 w-3.5" /> {payoutMutation.isPending ? "Saving…" : "Save"}
-              </button>
-              <button onClick={() => setEditing(null)}
-                className="flex items-center gap-1.5 border border-gray-200 text-gray-600 text-sm font-medium px-4 py-2 rounded-xl hover:bg-gray-50 transition-colors">
-                <X className="h-3.5 w-3.5" /> Cancel
-              </button>
-            </div>
+            <button onClick={startConnect} disabled={connecting} className="text-xs font-medium text-emerald-700 underline hover:text-emerald-900 shrink-0 disabled:opacity-50">
+              Manage
+            </button>
           </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-5">
-            <div className="flex items-start gap-3">
-              <Building2 className="h-4 w-4 text-gray-300 mt-0.5 shrink-0" />
-              <Field label="Bank" value={profile.bankName} />
-            </div>
-            <div className="flex items-start gap-3">
-              <div className="w-4 shrink-0" />
-              <Field label="Account Name" value={profile.bankAccountName} />
-            </div>
-            <div className="flex items-start gap-3">
-              <Lock className="h-4 w-4 text-gray-300 mt-0.5 shrink-0" />
+        ) : connectStatus?.detailsSubmitted ? (
+          <div className="space-y-3">
+            <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl p-4">
+              <Clock className="h-5 w-5 text-amber-500 shrink-0" />
               <div>
-                <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Account Number</p>
-                <div className="flex items-center gap-2">
-                  <p className="text-sm font-medium text-gray-900 font-mono">
-                    {showAccNumber ? profile.bankAccountNumber : mask(profile.bankAccountNumber)}
-                  </p>
-                  <button onClick={() => setShowAccNumber((v) => !v)} className="text-gray-300 hover:text-gray-500">
-                    {showAccNumber ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-                  </button>
-                </div>
+                <p className="text-sm font-semibold text-amber-800">Verification in progress</p>
+                <p className="text-xs text-amber-700 mt-0.5">Stripe is reviewing your details. This usually only takes a few minutes.</p>
               </div>
             </div>
+            <button onClick={startConnect} disabled={connecting}
+              className="flex items-center gap-2 border border-gray-200 text-gray-700 text-sm font-medium px-5 py-2.5 rounded-xl hover:bg-gray-50 disabled:opacity-60 transition-colors">
+              {connecting ? "Redirecting…" : "Continue verification"}
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <div className="flex items-start gap-2 text-xs text-gray-500 leading-relaxed">
+              <Lock className="h-3.5 w-3.5 shrink-0 mt-0.5 text-gray-300" />
+              <span>Stripe securely collects and <strong>verifies</strong> your bank details and identity — we never see or store your account number. Payouts are sent automatically when your items sell.</span>
+            </div>
+            <button onClick={startConnect} disabled={connecting}
+              className="flex items-center gap-2 bg-gray-900 text-white text-sm font-medium px-5 py-2.5 rounded-xl hover:bg-black disabled:opacity-60 transition-colors">
+              {connecting ? "Redirecting…" : "Connect payout account"}
+            </button>
           </div>
         )}
       </div>

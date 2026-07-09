@@ -197,6 +197,9 @@ model SellerProfile {
   isVerified Boolean @default(false)
   adminNotes String?
 
+  // Stripe Connect (Express) account for verified payouts.
+  stripeAccountId String?
+
   submissions Submission[]
   payouts     Payout[]
 

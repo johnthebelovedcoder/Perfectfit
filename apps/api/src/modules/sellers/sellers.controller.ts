@@ -59,6 +59,20 @@ export class SellersController {
     return { data };
   }
 
+  @Post("me/connect")
+  @Roles("SELLER")
+  async connect(@CurrentUser() user: SessionUser) {
+    const data = await this.sellersService.createConnectLink(user);
+    return { data };
+  }
+
+  @Get("me/connect/status")
+  @Roles("SELLER")
+  async connectStatus(@CurrentUser() user: SessionUser) {
+    const data = await this.sellersService.getConnectStatus(user);
+    return { data };
+  }
+
   @Patch("me")
   @Roles("SELLER")
   async updateMyProfile(
