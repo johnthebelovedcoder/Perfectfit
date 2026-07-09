@@ -62,9 +62,10 @@ export class PaymentsService {
     let session: Awaited<ReturnType<typeof this.stripe.checkout.sessions.create>>;
     try {
       session = await this.stripe.checkout.sessions.create({
-        // `embedded` is a stable Stripe feature; the pinned SDK's UiMode type lags behind.
+        // Stripe renamed the embedded UI mode to `embedded_page`; the pinned SDK's
+        // UiMode type still lists the old value, so cast.
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        ui_mode: "embedded" as any,
+        ui_mode: "embedded_page" as any,
         mode: "payment",
         customer_email: order.email,
         line_items: [...itemLineItems, ...shippingLineItem],
