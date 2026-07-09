@@ -101,6 +101,14 @@ export default function CheckoutPage() {
     if (auth?.user.email) setValue("email", auth.user.email);
   }, [auth, setValue]);
 
+  // Keep the (schema-validated) itemIds in sync with the cart. The cart store
+  // uses skipHydration and only populates in an effect AFTER mount, so the
+  // form's initial defaultValue is an empty array — which fails the
+  // `itemIds.min(1)` rule and silently blocks submission (no visible error).
+  useEffect(() => {
+    setValue("itemIds", items.map((i) => i.item.id));
+  }, [items, setValue]);
+
   useEffect(() => {
     if (hydrated && items.length === 0) router.push("/cart");
   }, [hydrated, items.length, router]);
