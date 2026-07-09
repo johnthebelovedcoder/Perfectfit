@@ -9,16 +9,13 @@ export const RegisterBuyerSchema = z.object({
 });
 export type RegisterBuyer = z.infer<typeof RegisterBuyerSchema>;
 
+// Seller signup is intentionally minimal — phone, city and bank/payout details
+// are collected later inside the app (Profile page).
 export const RegisterSellerSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8).max(72),
   firstName: z.string().min(1).max(100),
   lastName: z.string().min(1).max(100),
-  phone: z.string().min(7).max(20),
-  city: z.string().min(1).max(100),
-  bankAccountName: z.string().min(1).max(200),
-  bankAccountNumber: z.string().min(10).max(20),
-  bankName: z.string().min(1).max(100),
 });
 export type RegisterSeller = z.infer<typeof RegisterSellerSchema>;
 

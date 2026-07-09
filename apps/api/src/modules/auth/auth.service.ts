@@ -65,12 +65,12 @@ export class AuthService {
           create: {
             firstName: dto.firstName,
             lastName: dto.lastName,
-            phone: dto.phone,
-            city: dto.city,
-            // PII encrypted at rest with AES-256-GCM; decrypted on read in SellersService.
-            bankAccountName: encryptField(dto.bankAccountName),
-            bankAccountNumber: encryptField(dto.bankAccountNumber),
-            bankName: dto.bankName, // not sensitive (e.g. "Chase") — stored plaintext for display/search
+            // Collected later in the Profile page. Bank PII encrypted at rest.
+            phone: "",
+            city: "",
+            bankAccountName: encryptField(""),
+            bankAccountNumber: encryptField(""),
+            bankName: "",
           },
         },
       },
