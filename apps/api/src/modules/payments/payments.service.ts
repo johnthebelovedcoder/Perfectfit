@@ -16,11 +16,11 @@ export class PaymentsService {
   }
 
   /**
-   * Create a Stripe Checkout Session for an existing (unpaid) order.
-   * Returns the hosted checkout URL the storefront redirects the buyer to.
-   * Payment is NEVER confirmed here — only the signed webhook can do that.
+   * Create an EMBEDDED Stripe Checkout Session for an existing (unpaid) order.
+   * Returns the session client_secret the storefront mounts on-page (card form +
+   * wallets). Payment is NEVER confirmed here — only the signed webhook can do that.
    */
-  async createCheckoutSession(orderId: string): Promise<{ url: string }> {
+  async createCheckoutSession(orderId: string): Promise<{ clientSecret: string }> {
     const order = await this.ordersService.getById(orderId);
 
     if (order.paymentStatus === "PAID") {
@@ -30,6 +30,9 @@ export class PaymentsService {
     const storefrontUrl = this.config.get<string>("NEXT_PUBLIC_STOREFRONT_URL");
 
     const session = await this.stripe.checkout.sessions.create({
+      // `embedded` is a stable Stripe feature; the pinned SDK's UiMode type lags behind.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ui_mode: "embedded" as any,
       mode: "payment",
       customer_email: order.email,
       line_items: order.orderItems.map((oi) => ({
@@ -46,12 +49,12 @@ export class PaymentsService {
       // The webhook trusts ONLY this server-set metadata, never client input.
       metadata: { orderId: order.id },
       payment_intent_data: { metadata: { orderId: order.id } },
-      success_url: `${storefrontUrl}/order/${order.guestToken}/track?placed=1`,
-      cancel_url: `${storefrontUrl}/checkout?cancelled=1`,
+      // Stripe redirects here after payment; the webhook is the source of truth.
+      return_url: `${storefrontUrl}/order/${order.guestToken}/track?placed=1`,
     });
 
-    if (!session.url) throw new BadRequestException("Failed to create checkout session");
-    return { url: session.url };
+    if (!session.client_secret) throw new BadRequestException("Failed to create checkout session");
+    return { clientSecret: session.client_secret };
   }
 
   /**

@@ -15,8 +15,13 @@ import { useAuth } from "@/lib/auth";
 import { getCloudinaryUrl } from "@thread/utils";
 import { Price } from "@/components/shared/Price";
 import { api } from "@/lib/api";
+import { loadStripe } from "@stripe/stripe-js";
+import { EmbeddedCheckoutProvider, EmbeddedCheckout } from "@stripe/react-stripe-js";
 import { GuestCheckoutSchema } from "@thread/types";
 import type { GuestCheckout } from "@thread/types";
+
+// Publishable key is safe to expose; baked in at build time.
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? "");
 
 const US_STATES = [
   "Alabama","Alaska","Arizona","Arkansas","California","Colorado","Connecticut",
@@ -38,6 +43,7 @@ export default function CheckoutPage() {
   const [error, setError] = useState<string | null>(null);
   const [orderSummaryOpen, setOrderSummaryOpen] = useState(false);
   const [hydrated, setHydrated] = useState(false);
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
 
   const subtotal = totalKobo();
 
@@ -68,15 +74,15 @@ export default function CheckoutPage() {
         { ...data, itemIds: items.map((i) => i.item.id) }
       );
 
-      // 2. Ask the API for a Stripe Checkout session for this order.
-      const { url } = await api.post<{ url: string }>("/payments/checkout-session", {
+      // 2. Ask the API for an EMBEDDED Stripe Checkout session for this order.
+      const { clientSecret: secret } = await api.post<{ clientSecret: string }>("/payments/checkout-session", {
         orderId: result.order.id,
       });
 
-      // 3. Hand off to Stripe's hosted checkout. Payment is confirmed server-side
-      //    by the Stripe webhook; on success Stripe redirects to the order tracking
-      //    page (where the cart is cleared), on cancel back to /checkout.
-      window.location.href = url;
+      // 3. Mount Stripe's embedded card form on-page. Payment is confirmed
+      //    server-side by the Stripe webhook; on success Stripe redirects to the
+      //    order tracking page (where the cart is cleared).
+      setClientSecret(secret);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
       setIsSubmitting(false);
@@ -286,16 +292,23 @@ export default function CheckoutPage() {
                       <span>Secured by Stripe</span>
                     </div>
                   </div>
-                  <div className="rounded-xl bg-gray-50 border border-gray-100 p-5 flex items-start gap-3">
-                    <Lock className="h-5 w-5 text-emerald-500 shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-sm font-medium text-gray-700">You&apos;ll be redirected to Stripe to pay</p>
-                      <p className="text-xs text-gray-400 mt-1">
-                        After you place your order, we&apos;ll take you to Stripe&apos;s secure checkout to enter your
-                        card details. We never see or store your card information.
-                      </p>
+                  {clientSecret ? (
+                    <div className="rounded-xl overflow-hidden">
+                      <EmbeddedCheckoutProvider stripe={stripePromise} options={{ clientSecret }}>
+                        <EmbeddedCheckout />
+                      </EmbeddedCheckoutProvider>
                     </div>
-                  </div>
+                  ) : (
+                    <div className="rounded-xl bg-gray-50 border border-gray-100 p-5 flex items-start gap-3">
+                      <Lock className="h-5 w-5 text-emerald-500 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-medium text-gray-700">Enter your details, then pay securely below</p>
+                        <p className="text-xs text-gray-400 mt-1">
+                          Tap &quot;Continue to Payment&quot; and a secure card form (plus Apple&nbsp;Pay / Google&nbsp;Pay) appears right here. We never see or store your card details.
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {error && (
@@ -372,20 +385,22 @@ export default function CheckoutPage() {
                 </div>
               </div>
 
-              {/* CTA */}
-              <button
-                type="submit"
-                form="checkout-form"
-                disabled={isSubmitting || !online}
-                className="w-full bg-gray-900 text-white font-semibold py-4 rounded-2xl text-sm hover:bg-gray-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
-              >
-                <Lock className="h-4 w-4" />
-                {!online
-                  ? "Offline — reconnect to order"
-                  : isSubmitting
-                    ? "Placing Order..."
-                    : <>Place Order — <Price cents={subtotal} /></>}
-              </button>
+              {/* CTA — hidden once the embedded Stripe form is showing (it has its own Pay button) */}
+              {!clientSecret && (
+                <button
+                  type="submit"
+                  form="checkout-form"
+                  disabled={isSubmitting || !online}
+                  className="w-full bg-gray-900 text-white font-semibold py-4 rounded-2xl text-sm hover:bg-gray-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                >
+                  <Lock className="h-4 w-4" />
+                  {!online
+                    ? "Offline — reconnect to order"
+                    : isSubmitting
+                      ? "Preparing payment…"
+                      : <>Continue to Payment — <Price cents={subtotal} /></>}
+                </button>
+              )}
 
               {/* Trust row */}
               <div className="flex items-center justify-center gap-2 text-xs text-gray-400">

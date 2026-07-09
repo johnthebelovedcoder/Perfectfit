@@ -80,6 +80,7 @@ jobs:
             NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=${{ vars.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'dbzbeaxfm' }}
             NEXT_PUBLIC_SELLER_URL=${{ vars.NEXT_PUBLIC_SELLER_URL || 'https://seller.perfectfithq.com' }}
             NEXT_PUBLIC_ADMIN_URL=${{ vars.NEXT_PUBLIC_ADMIN_URL || 'https://admin.perfectfithq.com' }}
+            NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=${{ vars.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
 
       # Best-effort: the default GITHUB_TOKEN often can't change package
       # visibility (returns 403). Don't fail the run over it — set the package
