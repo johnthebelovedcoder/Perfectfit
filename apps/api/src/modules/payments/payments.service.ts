@@ -67,6 +67,10 @@ export class PaymentsService {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ui_mode: "embedded_page" as any,
         mode: "payment",
+        // Only offer payment methods proven to work end-to-end. Amazon Pay was
+        // failing (CORS/region); restricting here also removes it as an express
+        // option. Add more here once each is verified in live mode.
+        payment_method_types: ["card"],
         customer_email: order.email,
         line_items: [...itemLineItems, ...shippingLineItem],
         // The webhook trusts ONLY this server-set metadata, never client input.
