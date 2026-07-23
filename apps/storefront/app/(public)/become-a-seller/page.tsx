@@ -69,7 +69,7 @@ export default function BecomeASellerPage() {
             <h2 className="text-2xl font-bold text-gray-900 text-center mb-10">Get started in minutes</h2>
             <ol className="space-y-4">
               {[
-                { n: "1", t: "Create your seller account", d: "Sign up with your email. Provide your bank details for payouts. We verify your account within 24 hours." },
+                { n: "1", t: "Create your seller account", d: "Sign up with your email and start listing straight away — no waiting for approval. You'll confirm your identity later, before your first payout." },
                 { n: "2", t: "Submit your first item", d: "Upload photos, describe the condition, and name your payout. Our team reviews every submission before it goes live." },
                 { n: "3", t: "Ship it to us", d: "Once accepted, we send you shipping instructions. Drop off at any courier — we cover the logistics from there." },
                 { n: "4", t: "Collect your payout", d: "Your item sells. We process your payout within 7 days, straight to your account." },

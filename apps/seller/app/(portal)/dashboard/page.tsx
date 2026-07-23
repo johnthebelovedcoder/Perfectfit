@@ -43,7 +43,6 @@ const STATUS_LABEL: Record<string, string> = {
 
 interface ProfileData {
   firstName: string;
-  isVerified: boolean;
   stats: { total: number; live: number; sold: number; pending: number; totalEarned: number };
 }
 
@@ -65,7 +64,6 @@ export default function DashboardPage() {
 
   const profile = rawProfile as unknown as ProfileData | undefined;
   const submissions = rawSubs ?? [];
-  const isVerified = profileLoading ? true : (profile?.isVerified ?? false);
 
   // Action items — things that need seller attention right now
   const negotiations = submissions.filter(s => s.status === "UNDER_NEGOTIATION");
@@ -88,16 +86,6 @@ export default function DashboardPage() {
   return (
     <div className="p-4 sm:p-8 space-y-7">
       {subsError && <QueryError onRetry={() => void refetchSubs()} />}
-      {/* Verification warning */}
-      {!isVerified && (
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
-          <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
-          <div>
-            <p className="text-sm font-semibold text-amber-800">Account pending verification</p>
-            <p className="text-xs text-amber-700 mt-0.5">Our team will verify your account shortly. You can explore the portal, but won&apos;t be able to submit items until verified.</p>
-          </div>
-        </div>
-      )}
 
       {/* Header row */}
       <div className="flex items-center justify-between">

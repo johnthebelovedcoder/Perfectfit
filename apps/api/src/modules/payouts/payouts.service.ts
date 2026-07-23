@@ -43,6 +43,14 @@ export class PayoutsService {
     if (!payout) throw new NotFoundException("Payout not found");
     if (payout.status !== "QUEUED") throw new BadRequestException("Payout is not in QUEUED status");
 
+    // KYC gates the release of money, not earning it: payouts still queue up for
+    // sellers who haven't been approved, they just can't be paid out yet.
+    if (payout.seller.kycStatus !== "APPROVED") {
+      throw new BadRequestException(
+        "Seller KYC is not approved — payouts cannot be released until identity checks pass"
+      );
+    }
+
     const adminProfile = await this.db.adminProfile.findUnique({
       where: { userId: admin.id },
     });

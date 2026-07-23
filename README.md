@@ -88,6 +88,18 @@ stripe listen --forward-to localhost:3001/v1/webhooks/stripe
 # put the printed whsec_... into STRIPE_WEBHOOK_SECRET
 ```
 
+## Seller KYC
+Sellers go live the moment they register — there is no admin approval step for listing. Identity is checked separately via KYC (date of birth, residential address, government ID type + number), which gates **payout release only**: payouts still queue normally, but `markAsPaid` refuses until an admin approves the seller's KYC. ID numbers are encrypted at rest with `FIELD_ENCRYPTION_KEY`.
+
+Sellers submit from the seller portal Profile page; admins approve or reject on the admin Sellers page.
+
+> **One-off, on the deploy that first adds the KYC columns:** run [`backfill-kyc.sql`](packages/database/prisma/backfill-kyc.sql) once so pre-existing sellers are grandfathered to `APPROVED`. Skip it and every current seller's payouts freeze until they complete KYC. The script is idempotent — safe to re-run.
+> ```bash
+> docker compose exec api pnpm --filter @thread/database exec \
+>   prisma db execute --url "$DATABASE_URL" \
+>   --file /app/packages/database/prisma/backfill-kyc.sql
+> ```
+
 ## Production notes
 - Set real `NEXT_PUBLIC_*_URL` origins — the API refuses to boot with localhost origins when `NODE_ENV=production` (CORS hardening).
 - Create the first admin with `npx tsx packages/database/prisma/create-admin.ts` (reads `ADMIN_EMAIL` / `ADMIN_PASSWORD`) — never run the dev seed in production.

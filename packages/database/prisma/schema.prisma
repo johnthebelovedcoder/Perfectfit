@@ -20,6 +20,21 @@ enum Role {
   ADMIN
 }
 
+// Seller identity check. Gates payout release only — sellers go live the moment
+// they register and can list items immediately, approved or not.
+enum KycStatus {
+  NOT_STARTED
+  SUBMITTED
+  APPROVED
+  REJECTED
+}
+
+enum IdDocumentType {
+  PASSPORT
+  DRIVERS_LICENCE
+  NATIONAL_ID
+}
+
 enum SubmissionStatus {
   PENDING_REVIEW
   AWAITING_MORE_INFO
@@ -225,8 +240,32 @@ model SellerProfile {
   bankAccountNumber String // ENCRYPTED
   bankName          String
 
+  /// DEPRECATED — the admin approval gate was removed; sellers are live on
+  /// registration. Nothing reads this. Kept only so existing rows aren't dropped;
+  /// safe to delete in a later migration. Identity checks live in kycStatus.
   isVerified Boolean @default(false)
   adminNotes String?
+
+  // ─── KYC: identity + address ───
+  // Nullable because every profile predates KYC and sellers fill this in later.
+  dateOfBirth DateTime?
+
+  addressLine1 String?
+  addressLine2 String?
+  region       String? // state / county / province
+  postalCode   String?
+  country      String? // ISO 3166-1 alpha-2
+
+  idDocumentType   IdDocumentType?
+  idDocumentNumber String? // ENCRYPTED
+  idIssuingCountry String? // ISO 3166-1 alpha-2
+
+  kycStatus          KycStatus @default(NOT_STARTED)
+  kycSubmittedAt     DateTime?
+  kycReviewedAt      DateTime?
+  kycReviewedById    String?
+  kycReviewedBy      AdminProfile? @relation("KycReviewedBy", fields: [kycReviewedById], references: [id])
+  kycRejectionReason String?
 
   // Stripe Connect (Express) account for verified payouts.
   stripeAccountId String?
@@ -235,6 +274,7 @@ model SellerProfile {
   payouts     Payout[]
 
   @@index([userId])
+  @@index([kycStatus])
 }
 
 model AdminProfile {
@@ -249,8 +289,9 @@ model AdminProfile {
   lastName    String
   permissions String[] @default([])
 
-  reviewedSubmissions Submission[] @relation("ReviewedBy")
-  processedPayouts    Payout[]     @relation("ProcessedBy")
+  reviewedSubmissions Submission[]    @relation("ReviewedBy")
+  processedPayouts    Payout[]        @relation("ProcessedBy")
+  reviewedKyc         SellerProfile[] @relation("KycReviewedBy")
 }
 
 // ─── Items & Submissions ──────────────────────────────────────────────────────

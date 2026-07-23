@@ -18,8 +18,8 @@ import { RolesGuard } from "../../common/guards/roles.guard";
 import { Roles } from "../../common/decorators/roles.decorator";
 import { Public } from "../../common/decorators/public.decorator";
 import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe";
-import { UpdateItemSchema, CatalogueFilterSchema } from "@thread/types";
-import type { UpdateItem, CatalogueFilter } from "@thread/types";
+import { UpdateItemSchema, CatalogueFilterSchema, CreateItemDirectSchema } from "@thread/types";
+import type { UpdateItem, CatalogueFilter, CreateItemDirect } from "@thread/types";
 
 @Controller("items")
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -84,12 +84,9 @@ export class ItemsController {
 
   @Post("direct")
   @Roles("ADMIN")
-  async createDirect(@Body() body: unknown) {
-    const dto = body as {
-      title: string; brand?: string; category: string; itemType: string;
-      size: string; genderTarget: string; condition: string; description: string;
-      photos: string[]; retailPrice: number; agreedPayoutPrice: number;
-    };
+  async createDirect(
+    @Body(new ZodValidationPipe(CreateItemDirectSchema)) dto: CreateItemDirect
+  ) {
     const data = await this.itemsService.createDirect(dto);
     return { data };
   }

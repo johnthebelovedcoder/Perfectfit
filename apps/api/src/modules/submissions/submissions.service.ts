@@ -30,10 +30,9 @@ export class SubmissionsService {
     const sellerProfile = await this.db.sellerProfile.findUnique({
       where: { userId: user.id },
     });
+    // No admin approval gate: sellers are live as soon as they register. Identity
+    // is checked separately via KYC, which gates payouts rather than listing.
     if (!sellerProfile) throw new ForbiddenException("Seller profile required");
-    if (!sellerProfile.isVerified) {
-      throw new ForbiddenException("Seller account must be verified before submitting items");
-    }
 
     const submission = await this.repo.create({
       sellerId: sellerProfile.id,

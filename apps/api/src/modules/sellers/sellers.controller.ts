@@ -17,8 +17,8 @@ import { Roles } from "../../common/decorators/roles.decorator";
 import { CurrentUser } from "../../common/decorators/current-user.decorator";
 import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe";
 import { z } from "zod";
-import { UpdateSellerProfileSchema } from "@thread/types";
-import type { UpdateSellerProfile, SessionUser } from "@thread/types";
+import { UpdateSellerProfileSchema, SubmitKycSchema, ReviewKycSchema } from "@thread/types";
+import type { UpdateSellerProfile, SessionUser, SubmitKyc, ReviewKyc } from "@thread/types";
 
 const AdminNoteSchema = z.object({ note: z.string().min(1).max(1000) });
 
@@ -83,6 +83,16 @@ export class SellersController {
     return { data };
   }
 
+  @Post("me/kyc")
+  @Roles("SELLER")
+  async submitKyc(
+    @Body(new ZodValidationPipe(SubmitKycSchema)) dto: SubmitKyc,
+    @CurrentUser() user: SessionUser
+  ) {
+    const data = await this.sellersService.submitKyc(dto, user);
+    return { data };
+  }
+
   @Get()
   @Roles("ADMIN")
   async findAll(
@@ -100,10 +110,14 @@ export class SellersController {
     return { data };
   }
 
-  @Post(":id/verify")
+  @Post(":id/kyc/review")
   @Roles("ADMIN")
-  async verify(@Param("id") id: string) {
-    const data = await this.sellersService.verifyseller(id);
+  async reviewKyc(
+    @Param("id") id: string,
+    @Body(new ZodValidationPipe(ReviewKycSchema)) dto: ReviewKyc,
+    @CurrentUser() admin: SessionUser
+  ) {
+    const data = await this.sellersService.reviewKyc(id, dto, admin);
     return { data };
   }
 

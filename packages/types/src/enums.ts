@@ -21,6 +21,22 @@ export type SubmissionStatus = z.infer<typeof SubmissionStatusSchema>;
 export const ItemConditionSchema = z.enum(["BRAND_NEW", "EXCELLENT", "GOOD", "FAIR"]);
 export type ItemCondition = z.infer<typeof ItemConditionSchema>;
 
+/** Display labels for each condition enum value (single source of truth). */
+export const CONDITION_LABELS: Record<ItemCondition, string> = {
+  BRAND_NEW: "Brand New",
+  EXCELLENT: "Excellent",
+  GOOD: "Good",
+  FAIR: "Fair",
+};
+
+/** Ordered list of condition values, for building dropdowns/filters. */
+export const CONDITION_VALUES = ItemConditionSchema.options;
+
+/** Resolve a condition enum value to its display label (falls back to the raw value). */
+export function conditionLabel(condition: string): string {
+  return (CONDITION_LABELS as Record<string, string>)[condition] ?? condition;
+}
+
 export const ItemCategorySchema = z.enum([
   "WOMENS_AFRICAN_WEAR",
   "MENS_AFRICAN_WEAR",
@@ -68,6 +84,22 @@ export function categoryLabel(category: string): string {
 export const GenderTargetSchema = z.enum(["MEN", "WOMEN", "UNISEX", "KIDS"]);
 export type GenderTarget = z.infer<typeof GenderTargetSchema>;
 
+/** Display labels for each gender-target enum value (single source of truth). */
+export const GENDER_LABELS: Record<GenderTarget, string> = {
+  MEN: "Men",
+  WOMEN: "Women",
+  UNISEX: "Unisex",
+  KIDS: "Kids",
+};
+
+/** Ordered list of gender-target values, for building dropdowns/filters. */
+export const GENDER_VALUES = GenderTargetSchema.options;
+
+/** Resolve a gender-target enum value to its display label (falls back to the raw value). */
+export function genderLabel(gender: string): string {
+  return (GENDER_LABELS as Record<string, string>)[gender] ?? gender;
+}
+
 export const OrderStatusSchema = z.enum([
   "PLACED",
   "PROCESSING",
@@ -88,6 +120,40 @@ export const PayoutStatusSchema = z.enum([
   "FAILED",
 ]);
 export type PayoutStatus = z.infer<typeof PayoutStatusSchema>;
+
+export const KycStatusSchema = z.enum(["NOT_STARTED", "SUBMITTED", "APPROVED", "REJECTED"]);
+export type KycStatus = z.infer<typeof KycStatusSchema>;
+
+/** Display labels for each KYC status (single source of truth). */
+export const KYC_STATUS_LABELS: Record<KycStatus, string> = {
+  NOT_STARTED: "Not started",
+  SUBMITTED: "Awaiting review",
+  APPROVED: "Approved",
+  REJECTED: "Rejected",
+};
+
+/** Resolve a KYC status to its display label (falls back to the raw value). */
+export function kycStatusLabel(status: string): string {
+  return (KYC_STATUS_LABELS as Record<string, string>)[status] ?? status;
+}
+
+export const IdDocumentTypeSchema = z.enum(["PASSPORT", "DRIVERS_LICENCE", "NATIONAL_ID"]);
+export type IdDocumentType = z.infer<typeof IdDocumentTypeSchema>;
+
+/** Display labels for each accepted ID document type (single source of truth). */
+export const ID_DOCUMENT_LABELS: Record<IdDocumentType, string> = {
+  PASSPORT: "Passport",
+  DRIVERS_LICENCE: "Driver's Licence",
+  NATIONAL_ID: "National ID Card",
+};
+
+/** Ordered list of ID document types, for building dropdowns. */
+export const ID_DOCUMENT_VALUES = IdDocumentTypeSchema.options;
+
+/** Resolve an ID document type to its display label (falls back to the raw value). */
+export function idDocumentLabel(type: string): string {
+  return (ID_DOCUMENT_LABELS as Record<string, string>)[type] ?? type;
+}
 
 export const RejectionReasonSchema = z.enum([
   "ITEM_CONDITION_BELOW_STANDARD",

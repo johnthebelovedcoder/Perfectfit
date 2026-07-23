@@ -6,8 +6,10 @@ function makeService() {
   const db = {
     order: { findUnique: vi.fn() },
     item: { findUnique: vi.fn() },
-    payout: { findUnique: vi.fn(), create: vi.fn() },
-    submission: { update: vi.fn() },
+    payout: { findUnique: vi.fn(), create: vi.fn(), update: vi.fn() },
+    submission: { update: vi.fn(), updateMany: vi.fn() },
+    adminProfile: { findUnique: vi.fn() },
+    $transaction: vi.fn().mockResolvedValue([{ id: "payout1", status: "COMPLETED" }]),
   };
   const queue = { add: vi.fn() };
   const service = new PayoutsService(db as never, queue as never);
@@ -69,5 +71,46 @@ describe("PayoutsService.queuePayout — refund guard", () => {
     ctx.db.item.findUnique.mockResolvedValue({ id: "item1", submissionId: null, submission: null });
     await ctx.service.queuePayout("item1", "order1", new Date());
     expect(ctx.db.payout.create).not.toHaveBeenCalled();
+  });
+});
+
+describe("PayoutsService.markAsPaid — KYC gate", () => {
+  let ctx: ReturnType<typeof makeService>;
+  const ADMIN = { id: "user-admin" } as never;
+
+  function queuedPayoutForSeller(kycStatus: string) {
+    return {
+      id: "payout1",
+      itemId: "item1",
+      sellerId: "seller1",
+      status: "QUEUED",
+      seller: { id: "seller1", kycStatus, user: { email: "seller@thread.com" } },
+      item: { id: "item1" },
+    };
+  }
+
+  beforeEach(() => {
+    ctx = makeService();
+    ctx.db.adminProfile.findUnique.mockResolvedValue({ id: "admin1" });
+  });
+
+  for (const status of ["NOT_STARTED", "SUBMITTED", "REJECTED"]) {
+    it(`refuses to release a payout when seller KYC is ${status}`, async () => {
+      ctx.db.payout.findUnique.mockResolvedValue(queuedPayoutForSeller(status));
+      await expect(ctx.service.markAsPaid("payout1", ADMIN)).rejects.toThrow(/KYC is not approved/);
+      expect(ctx.db.$transaction).not.toHaveBeenCalled();
+      expect(ctx.queue.add).not.toHaveBeenCalled();
+    });
+  }
+
+  it("releases the payout once seller KYC is APPROVED", async () => {
+    ctx.db.payout.findUnique.mockResolvedValue(queuedPayoutForSeller("APPROVED"));
+    await ctx.service.markAsPaid("payout1", ADMIN);
+    expect(ctx.db.$transaction).toHaveBeenCalledOnce();
+    expect(ctx.queue.add).toHaveBeenCalledWith(
+      "payout-processed",
+      expect.objectContaining({ payoutId: "payout1" }),
+      expect.anything()
+    );
   });
 });

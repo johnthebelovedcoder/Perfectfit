@@ -6,7 +6,7 @@ import { DatabaseService } from "../../common/database/database.service";
 import { NOTIFICATION_QUEUE, SEARCH_SYNC_QUEUE, IMAGE_MIGRATE_QUEUE, JOB_OPTS } from "../../queues/queue.constants";
 import { generateItemSlug } from "@thread/utils";
 import { categoryLabel } from "@thread/types";
-import type { UpdateItem, CatalogueFilter } from "@thread/types";
+import type { UpdateItem, CatalogueFilter, CreateItemDirect } from "@thread/types";
 import type { Prisma } from "@thread/database";
 
 @Injectable()
@@ -39,19 +39,7 @@ export class ItemsService {
     return item;
   }
 
-  async createDirect(dto: {
-    title: string;
-    brand?: string;
-    category: string;
-    itemType: string;
-    size: string;
-    genderTarget: string;
-    condition: string;
-    description: string;
-    photos: string[];
-    retailPrice: number;
-    agreedPayoutPrice: number;
-  }) {
+  async createDirect(dto: CreateItemDirect) {
     const slug = generateItemSlug(dto.title, Date.now().toString(36));
     return this.repo.createDirect({ ...dto, slug });
   }

@@ -46,8 +46,8 @@ export class AdminService {
       // Submissions with PAYOUT_QUEUED status
       this.db.submission.count({ where: { status: "PAYOUT_QUEUED" } }),
 
-      // Verified sellers with at least one live or sold item
-      this.db.sellerProfile.count({ where: { isVerified: true, deletedAt: null } }),
+      // Registered sellers — there is no admin approval step, so every seller is active
+      this.db.sellerProfile.count({ where: { deletedAt: null } }),
     ]);
 
     return {
@@ -80,7 +80,7 @@ export class AdminService {
       payoutsCompleted,
       payoutsQueued,
       sellersTotal,
-      sellersVerified,
+      sellersKycApproved,
       submissionGroups,
       orderStatusGroups,
       rangeOrders,
@@ -98,7 +98,7 @@ export class AdminService {
       this.db.payout.aggregate({ where: { status: "COMPLETED", processedAt: inRange }, _sum: { amountKobo: true }, _count: true }),
       this.db.payout.aggregate({ where: { status: "QUEUED" }, _sum: { amountKobo: true }, _count: true }), // snapshot
       this.db.sellerProfile.count({ where: { deletedAt: null } }), // snapshot
-      this.db.sellerProfile.count({ where: { isVerified: true, deletedAt: null } }), // snapshot
+      this.db.sellerProfile.count({ where: { kycStatus: "APPROVED", deletedAt: null } }), // snapshot
       this.db.submission.groupBy({ by: ["status"], where: { createdAt: inRange }, _count: { _all: true } }),
       this.db.order.groupBy({ by: ["status"], where: { createdAt: inRange }, _count: { _all: true } }),
       this.db.order.findMany({
@@ -196,7 +196,7 @@ export class AdminService {
         soldItems: soldItems.length,
         sellThrough,
         sellersTotal,
-        sellersVerified,
+        sellersKycApproved,
         acceptanceRate,
       },
       revenueSeries: buckets.map((b) => ({ date: b.label, revenueKobo: b.revenueKobo, orders: b.orders })),

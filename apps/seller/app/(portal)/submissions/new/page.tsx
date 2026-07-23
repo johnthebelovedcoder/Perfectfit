@@ -4,8 +4,6 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle } from "lucide-react";
 import { CreateSubmissionSchema, CATEGORY_VALUES, categoryLabel } from "@thread/types";
 import { api } from "@/lib/api";
 import type { CreateSubmission } from "@thread/types";
@@ -34,12 +32,6 @@ export default function NewSubmissionPage() {
   const [error, setError] = useState<string | null>(null);
   const [payoutInput, setPayoutInput] = useState("");
 
-  const { data: profile, isLoading: profileLoading } = useQuery({
-    queryKey: ["seller-profile"],
-    queryFn: () => api.get<{ isVerified: boolean }>("/sellers/me"),
-  });
-  const isVerified = profile?.isVerified ?? false;
-
   const form = useForm<CreateSubmission>({
     resolver: zodResolver(CreateSubmissionSchema),
     defaultValues: { photos: [], genderTarget: "WOMEN", condition: "GOOD" },
@@ -61,36 +53,6 @@ export default function NewSubmissionPage() {
     }
   };
 
-  if (profileLoading) {
-    return (
-      <div className="p-4 sm:p-8 max-w-2xl">
-        <div className="animate-pulse h-8 bg-gray-100 rounded-xl w-48 mb-10" />
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 h-64" />
-      </div>
-    );
-  }
-
-  if (!isVerified) {
-    return (
-      <div className="p-4 sm:p-8 max-w-2xl">
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-8 text-center">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-amber-100 mb-4">
-            <AlertTriangle className="h-7 w-7 text-amber-600" />
-          </div>
-          <h2 className="text-xl font-bold text-gray-900 mb-2">Account Not Yet Verified</h2>
-          <p className="text-gray-600 text-sm max-w-sm mx-auto mb-6">
-            Your seller account is pending verification by our team. You&apos;ll be able to submit items once your account has been approved — usually within 24 hours.
-          </p>
-          <button
-            onClick={() => router.push("/submissions")}
-            className="px-5 py-2.5 bg-gray-900 hover:bg-black text-white rounded-xl text-sm font-medium transition-colors"
-          >
-            Back to Submissions
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="p-4 sm:p-8 max-w-2xl">

@@ -4,10 +4,12 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   CheckCircle, Mail, Phone, MapPin, Building2,
-  Pencil, Lock, Package, Tag, DollarSign, Clock, AlertTriangle, Eye, EyeOff, X, Check,
+  Pencil, Lock, Package, Tag, DollarSign, Clock, AlertTriangle, Eye, EyeOff, X, Check, ShieldCheck,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { formatPrice } from "@thread/utils";
+import { ID_DOCUMENT_VALUES, idDocumentLabel, kycStatusLabel } from "@thread/types";
+import type { KycStatus } from "@thread/types";
 
 interface SellerProfile {
   id: string;
@@ -18,10 +20,24 @@ interface SellerProfile {
   bankName: string;
   bankAccountName: string;
   bankAccountNumber: string;
-  isVerified: boolean;
   createdAt: string;
   user: { email: string; emailVerified: boolean };
   stats: { total: number; live: number; sold: number; pending: number; totalEarned: number };
+
+  // KYC
+  kycStatus: KycStatus;
+  kycSubmittedAt: string | null;
+  kycReviewedAt: string | null;
+  kycRejectionReason: string | null;
+  dateOfBirth: string | null;
+  addressLine1: string | null;
+  addressLine2: string | null;
+  region: string | null;
+  postalCode: string | null;
+  country: string | null;
+  idDocumentType: string | null;
+  idDocumentNumber: string | null;
+  idIssuingCountry: string | null;
 }
 
 function mask(s: string) {
@@ -56,7 +72,7 @@ function EditField({
       <label className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1 block">{label}</label>
       <div className="relative">
         <input
-          type={isPassword && !show ? "password" : "text"}
+          type={isPassword ? (show ? "text" : "password") : type}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
@@ -140,6 +156,177 @@ function ChangePasswordSection() {
   );
 }
 
+const KYC_PILL: Record<KycStatus, string> = {
+  NOT_STARTED: "text-gray-500 bg-gray-50 border-gray-200",
+  SUBMITTED: "text-amber-600 bg-amber-50 border-amber-200",
+  APPROVED: "text-emerald-600 bg-emerald-50 border-emerald-200",
+  REJECTED: "text-red-600 bg-red-50 border-red-200",
+};
+
+const BLANK_KYC = {
+  dateOfBirth: "", addressLine1: "", addressLine2: "", city: "", region: "",
+  postalCode: "", country: "", idDocumentType: ID_DOCUMENT_VALUES[0] as string,
+  idDocumentNumber: "", idIssuingCountry: "",
+};
+
+/**
+ * Identity verification. Payouts are held until an admin approves this — sellers
+ * can still list and sell while it's pending.
+ */
+function KycSection({ profile }: { profile: SellerProfile }) {
+  const qc = useQueryClient();
+  const status = profile.kycStatus ?? "NOT_STARTED";
+  const canEdit = status === "NOT_STARTED" || status === "REJECTED";
+  const [open, setOpen] = useState(false);
+  const [form, setForm] = useState({ ...BLANK_KYC, city: profile.city ?? "" });
+  const [error, setError] = useState<string | null>(null);
+
+  const mutation = useMutation({
+    mutationFn: (dto: Record<string, string>) => api.post("/sellers/me/kyc", dto),
+    onSuccess: () => {
+      setError(null);
+      setOpen(false);
+      void qc.invalidateQueries({ queryKey: ["my-profile"] });
+    },
+    onError: (err: unknown) => setError(err instanceof Error ? err.message : "Could not submit your details"),
+  });
+
+  function submit() {
+    setError(null);
+    const required = ["dateOfBirth", "addressLine1", "city", "region", "postalCode", "country", "idDocumentNumber", "idIssuingCountry"] as const;
+    if (required.some((k) => !form[k].trim())) { setError("Please fill in every required field"); return; }
+    mutation.mutate({
+      ...form,
+      addressLine2: form.addressLine2.trim() || undefined,
+      country: form.country.toUpperCase(),
+      idIssuingCountry: form.idIssuingCountry.toUpperCase(),
+    } as Record<string, string>);
+  }
+
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+      <div className="flex items-start justify-between mb-4">
+        <div className="flex items-start gap-3">
+          <ShieldCheck className="h-4 w-4 text-gray-300 mt-1 shrink-0" />
+          <div>
+            <p className="font-semibold text-gray-900">Identity Verification</p>
+            <p className="text-xs text-gray-400 mt-0.5">Required before we can release your payouts</p>
+          </div>
+        </div>
+        <span className={`text-xs font-medium px-2.5 py-1 rounded-full border shrink-0 ${KYC_PILL[status]}`}>
+          {kycStatusLabel(status)}
+        </span>
+      </div>
+
+      {status === "APPROVED" && (
+        <div className="flex items-center gap-3 bg-emerald-50 border border-emerald-200 rounded-xl p-4">
+          <CheckCircle className="h-5 w-5 text-emerald-500 shrink-0" />
+          <div>
+            <p className="text-sm font-semibold text-emerald-800">Identity verified</p>
+            <p className="text-xs text-emerald-700 mt-0.5">Your payouts can be released. Contact support if your details change.</p>
+          </div>
+        </div>
+      )}
+
+      {status === "SUBMITTED" && (
+        <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl p-4">
+          <Clock className="h-5 w-5 text-amber-500 shrink-0" />
+          <div>
+            <p className="text-sm font-semibold text-amber-800">Under review</p>
+            <p className="text-xs text-amber-700 mt-0.5">
+              We&apos;re checking your details. You can keep listing items while you wait.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {status === "REJECTED" && profile.kycRejectionReason && (
+        <div className="flex items-start gap-3 bg-red-50 border border-red-200 rounded-xl p-4 mb-4">
+          <AlertTriangle className="h-4 w-4 text-red-500 mt-0.5 shrink-0" />
+          <div>
+            <p className="text-sm font-semibold text-red-800">We couldn&apos;t verify these details</p>
+            <p className="text-xs text-red-700 mt-0.5">{profile.kycRejectionReason}</p>
+          </div>
+        </div>
+      )}
+
+      {canEdit && !open && (
+        <button onClick={() => setOpen(true)}
+          className="bg-gray-900 text-white text-sm font-medium px-5 py-2.5 rounded-xl hover:bg-black transition-colors">
+          {status === "REJECTED" ? "Resubmit details" : "Start verification"}
+        </button>
+      )}
+
+      {canEdit && open && (
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <EditField label="Date of Birth" type="date" value={form.dateOfBirth}
+              onChange={(v) => setForm((f) => ({ ...f, dateOfBirth: v }))} hint="You must be 18 or over" />
+            <div>
+              <label className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1 block">ID Document</label>
+              <select value={form.idDocumentType}
+                onChange={(e) => setForm((f) => ({ ...f, idDocumentType: e.target.value }))}
+                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900">
+                {ID_DOCUMENT_VALUES.map((t) => <option key={t} value={t}>{idDocumentLabel(t)}</option>)}
+              </select>
+            </div>
+            <EditField label="ID Number" value={form.idDocumentNumber}
+              onChange={(v) => setForm((f) => ({ ...f, idDocumentNumber: v }))} placeholder="e.g. 123456789" />
+            <EditField label="Issuing Country" value={form.idIssuingCountry}
+              onChange={(v) => setForm((f) => ({ ...f, idIssuingCountry: v.toUpperCase().slice(0, 2) }))}
+              placeholder="GB" hint="2-letter country code" />
+            <div className="sm:col-span-2">
+              <EditField label="Address Line 1" value={form.addressLine1}
+                onChange={(v) => setForm((f) => ({ ...f, addressLine1: v }))} placeholder="Street address" />
+            </div>
+            <div className="sm:col-span-2">
+              <EditField label="Address Line 2 (optional)" value={form.addressLine2}
+                onChange={(v) => setForm((f) => ({ ...f, addressLine2: v }))} placeholder="Flat, suite, etc." />
+            </div>
+            <EditField label="City" value={form.city} onChange={(v) => setForm((f) => ({ ...f, city: v }))} />
+            <EditField label="State / County" value={form.region}
+              onChange={(v) => setForm((f) => ({ ...f, region: v }))} />
+            <EditField label="Postal Code" value={form.postalCode}
+              onChange={(v) => setForm((f) => ({ ...f, postalCode: v }))} />
+            <EditField label="Country" value={form.country}
+              onChange={(v) => setForm((f) => ({ ...f, country: v.toUpperCase().slice(0, 2) }))}
+              placeholder="GB" hint="2-letter country code" />
+          </div>
+
+          <div className="flex items-start gap-2 text-[11px] text-gray-400 leading-relaxed">
+            <Lock className="h-3 w-3 shrink-0 mt-0.5" />
+            <span>Your ID number is encrypted at rest and only visible to our verification team.</span>
+          </div>
+
+          {error && <p className="text-xs text-red-500">{error}</p>}
+
+          <div className="flex gap-2">
+            <button onClick={submit} disabled={mutation.isPending}
+              className="flex items-center gap-1.5 bg-gray-900 text-white text-sm font-medium px-4 py-2 rounded-xl hover:bg-black disabled:opacity-60 transition-colors">
+              <Check className="h-3.5 w-3.5" /> {mutation.isPending ? "Submitting…" : "Submit for review"}
+            </button>
+            <button onClick={() => { setOpen(false); setError(null); }}
+              className="flex items-center gap-1.5 border border-gray-200 text-gray-600 text-sm font-medium px-4 py-2 rounded-xl hover:bg-gray-50 transition-colors">
+              <X className="h-3.5 w-3.5" /> Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {!canEdit && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-5 mt-5 pt-5 border-t border-gray-50">
+          <Field label="Date of Birth" value={profile.dateOfBirth ? new Date(profile.dateOfBirth).toLocaleDateString() : undefined} />
+          <Field label="ID Document" value={profile.idDocumentType ? idDocumentLabel(profile.idDocumentType) : undefined}
+            hint={profile.idDocumentNumber ? mask(profile.idDocumentNumber) : undefined} />
+          <div className="sm:col-span-2">
+            <Field label="Address" value={[profile.addressLine1, profile.addressLine2, profile.city, profile.region, profile.postalCode, profile.country].filter(Boolean).join(", ")} />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 type EditSection = "personal" | "payout" | null;
 
 export default function ProfilePage() {
@@ -218,17 +405,6 @@ export default function ProfilePage() {
     <div className="p-4 sm:p-8 max-w-3xl space-y-6">
       <h1 className="text-2xl font-bold text-gray-900">My Profile</h1>
 
-      {/* Verification warning */}
-      {!profile.isVerified && (
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
-          <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
-          <div>
-            <p className="text-sm font-semibold text-amber-800">Awaiting verification</p>
-            <p className="text-xs text-amber-700 mt-0.5">Our team is reviewing your account. You&apos;ll be able to submit items once verified.</p>
-          </div>
-        </div>
-      )}
-
       {/* Identity card */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         {/* Cover strip */}
@@ -239,9 +415,9 @@ export default function ProfilePage() {
             <div className="w-16 h-16 rounded-2xl bg-white border-2 border-white shadow-md flex items-center justify-center text-xl font-bold text-gray-700">
               {initials}
             </div>
-            {profile.isVerified && (
+            {profile.kycStatus === "APPROVED" && (
               <span className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full">
-                <CheckCircle className="h-3.5 w-3.5" /> Verified Seller
+                <CheckCircle className="h-3.5 w-3.5" /> Identity Verified
               </span>
             )}
           </div>
@@ -315,6 +491,9 @@ export default function ProfilePage() {
           </div>
         )}
       </div>
+
+      {/* Identity Verification (KYC) */}
+      <KycSection profile={profile} />
 
       {/* Payout Account — Stripe Connect */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">

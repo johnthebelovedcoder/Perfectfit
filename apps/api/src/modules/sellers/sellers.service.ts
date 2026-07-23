@@ -4,7 +4,7 @@ import Stripe = require("stripe");
 import { DatabaseService } from "../../common/database/database.service";
 import { encryptField, decryptField } from "../../common/crypto/field-crypto";
 import { buildTimeBuckets } from "../../common/analytics/time-buckets";
-import type { UpdateSellerProfile, SessionUser } from "@thread/types";
+import type { UpdateSellerProfile, SessionUser, SubmitKyc, ReviewKyc } from "@thread/types";
 
 @Injectable()
 export class SellersService {
@@ -96,6 +96,7 @@ export class SellersService {
       // Decrypt PII for the seller's own profile view.
       bankAccountName: decryptField(profile.bankAccountName),
       bankAccountNumber: decryptField(profile.bankAccountNumber),
+      idDocumentNumber: decryptField(profile.idDocumentNumber),
       stats: {
         total: profile._count.submissions,
         live: liveCount,
@@ -241,6 +242,70 @@ export class SellersService {
     });
   }
 
+  /**
+   * Seller submits (or resubmits) their KYC details for review. Approved records
+   * are locked — a seller cannot silently change their identity after approval.
+   */
+  async submitKyc(dto: SubmitKyc, user: SessionUser) {
+    const profile = await this.db.sellerProfile.findUnique({
+      where: { userId: user.id },
+      select: { id: true, kycStatus: true },
+    });
+    if (!profile) throw new NotFoundException("Seller profile not found");
+    if (profile.kycStatus === "APPROVED") {
+      throw new BadRequestException("KYC is already approved. Contact support to change your details.");
+    }
+
+    return this.db.sellerProfile.update({
+      where: { id: profile.id },
+      data: {
+        dateOfBirth: new Date(`${dto.dateOfBirth}T00:00:00Z`),
+        addressLine1: dto.addressLine1,
+        addressLine2: dto.addressLine2 ?? null,
+        city: dto.city,
+        region: dto.region,
+        postalCode: dto.postalCode,
+        country: dto.country,
+        idDocumentType: dto.idDocumentType,
+        idDocumentNumber: encryptField(dto.idDocumentNumber),
+        idIssuingCountry: dto.idIssuingCountry,
+        kycStatus: "SUBMITTED",
+        kycSubmittedAt: new Date(),
+        // Clear the previous decision so a resubmission starts clean.
+        kycReviewedAt: null,
+        kycReviewedById: null,
+        kycRejectionReason: null,
+      },
+      select: { id: true, kycStatus: true, kycSubmittedAt: true },
+    });
+  }
+
+  /** Admin approves or rejects a seller's submitted KYC. */
+  async reviewKyc(id: string, dto: ReviewKyc, admin: SessionUser) {
+    const adminProfile = await this.db.adminProfile.findUnique({ where: { userId: admin.id } });
+    if (!adminProfile) throw new ForbiddenException();
+
+    const profile = await this.db.sellerProfile.findUnique({
+      where: { id },
+      select: { id: true, kycStatus: true },
+    });
+    if (!profile) throw new NotFoundException("Seller not found");
+    if (profile.kycStatus !== "SUBMITTED") {
+      throw new BadRequestException("This seller has no KYC submission awaiting review");
+    }
+
+    return this.db.sellerProfile.update({
+      where: { id },
+      data: {
+        kycStatus: dto.decision === "APPROVE" ? "APPROVED" : "REJECTED",
+        kycRejectionReason: dto.decision === "REJECT" ? dto.rejectionReason : null,
+        kycReviewedAt: new Date(),
+        kycReviewedById: adminProfile.id,
+      },
+      select: { id: true, kycStatus: true, kycReviewedAt: true, kycRejectionReason: true },
+    });
+  }
+
   async findAll(page: number, limit: number) {
     const [items, total] = await Promise.all([
       this.db.sellerProfile.findMany({
@@ -287,8 +352,9 @@ export class SellersService {
     const earnedMap = Object.fromEntries(earnedAgg.map((r) => [r.sellerId, r._sum.amountKobo ?? 0]));
 
     const enriched = items.map((s) => {
-      // The list view only needs bankName; never expose encrypted account PII in a bulk list.
-      const { bankAccountName: _n, bankAccountNumber: _acc, ...rest } = s;
+      // The list view only needs bankName and kycStatus; never expose account or
+      // identity-document PII in a bulk list.
+      const { bankAccountName: _n, bankAccountNumber: _acc, idDocumentNumber: _id, ...rest } = s;
       return {
         ...rest,
         stats: {
@@ -321,6 +387,7 @@ export class SellersService {
       ...seller,
       bankAccountName: decryptField(seller.bankAccountName),
       bankAccountNumber: decryptField(seller.bankAccountNumber),
+      idDocumentNumber: decryptField(seller.idDocumentNumber),
     };
   }
 
@@ -333,12 +400,4 @@ export class SellersService {
     }
   }
 
-  async verifyseller(id: string) {
-    try {
-      return await this.db.sellerProfile.update({ where: { id }, data: { isVerified: true } });
-    } catch (e: any) {
-      if (e?.code === "P2025") throw new NotFoundException("Seller not found");
-      throw e;
-    }
-  }
 }

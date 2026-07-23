@@ -6,7 +6,14 @@ import Image from "next/image";
 import { Search, Eye, Globe, EyeOff, Plus, X } from "lucide-react";
 import { api } from "@/lib/api";
 import { getCloudinaryUrl, formatPrice } from "@thread/utils";
-import { CATEGORY_VALUES, categoryLabel } from "@thread/types";
+import {
+  CATEGORY_VALUES,
+  categoryLabel,
+  CONDITION_VALUES,
+  conditionLabel,
+  GENDER_VALUES,
+  genderLabel,
+} from "@thread/types";
 import { PhotoUpload } from "@/components/shared/PhotoUpload";
 import { QueryError } from "@/components/shared/QueryError";
 
@@ -33,8 +40,6 @@ function marginPct(retail: number, payout: number) {
 }
 
 const CATEGORY_OPTIONS = ["All", ...CATEGORY_VALUES];
-const CONDITIONS = ["EXCELLENT", "VERY_GOOD", "GOOD", "FAIR"];
-const GENDERS = ["UNISEX", "MALE", "FEMALE"];
 
 const BLANK_FORM = { title: "", brand: "", category: CATEGORY_VALUES[0] as string, itemType: "", size: "", genderTarget: "UNISEX", condition: "EXCELLENT", description: "", retailPrice: "", agreedPayoutPrice: "", photos: [] as string[] };
 
@@ -316,14 +321,14 @@ export default function CataloguePage() {
                   <label className="block text-xs font-medium text-gray-600 mb-1">Gender</label>
                   <select value={form.genderTarget} onChange={(e) => setForm((f) => ({ ...f, genderTarget: e.target.value }))}
                     className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-200">
-                    {GENDERS.map((g) => <option key={g} value={g}>{g.charAt(0) + g.slice(1).toLowerCase()}</option>)}
+                    {GENDER_VALUES.map((g) => <option key={g} value={g}>{genderLabel(g)}</option>)}
                   </select>
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">Condition</label>
                   <select value={form.condition} onChange={(e) => setForm((f) => ({ ...f, condition: e.target.value }))}
                     className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-200">
-                    {CONDITIONS.map((c) => <option key={c} value={c}>{c.replace(/_/g, " ").charAt(0) + c.replace(/_/g, " ").slice(1).toLowerCase()}</option>)}
+                    {CONDITION_VALUES.map((c) => <option key={c} value={c}>{conditionLabel(c)}</option>)}
                   </select>
                 </div>
                 <div>

@@ -17,7 +17,7 @@ interface Analytics {
     paidOrders: number; refundedKobo: number; refundRate: number;
     paidOutKobo: number; pendingPayoutKobo: number; pendingPayoutCount: number;
     liveItems: number; draftItems: number; soldItems: number; sellThrough: number;
-    sellersTotal: number; sellersVerified: number; acceptanceRate: number;
+    sellersTotal: number; sellersKycApproved: number; acceptanceRate: number;
   };
   revenueSeries: { date: string; revenueKobo: number; orders: number }[];
   orderStatus: { status: string; count: number }[];

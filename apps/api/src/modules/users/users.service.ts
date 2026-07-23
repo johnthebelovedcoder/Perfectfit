@@ -16,7 +16,7 @@ export class UsersService {
         emailVerified: true,
         mfaEnabled: true,
         createdAt: true,
-        sellerProfile: { select: { firstName: true, lastName: true, isVerified: true } },
+        sellerProfile: { select: { firstName: true, lastName: true, kycStatus: true } },
         adminProfile: { select: { firstName: true, lastName: true, permissions: true } },
       },
     });

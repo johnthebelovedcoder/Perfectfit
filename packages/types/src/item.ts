@@ -20,6 +20,22 @@ export const CatalogueItemSchema = z.object({
 });
 export type CatalogueItem = z.infer<typeof CatalogueItemSchema>;
 
+/** Admin-created catalogue item with no originating seller submission (house stock). */
+export const CreateItemDirectSchema = z.object({
+  title: z.string().min(1).max(200),
+  description: z.string().min(10).max(2000),
+  category: ItemCategorySchema,
+  itemType: z.string().min(1).max(100),
+  brand: z.string().max(100).optional(),
+  size: z.string().min(1).max(20),
+  genderTarget: GenderTargetSchema,
+  condition: ItemConditionSchema,
+  photos: z.array(z.string()).min(1).max(8),
+  retailPrice: z.number().int().positive(),
+  agreedPayoutPrice: z.number().int().nonnegative().default(0),
+});
+export type CreateItemDirect = z.infer<typeof CreateItemDirectSchema>;
+
 export const UpdateItemSchema = z.object({
   title: z.string().min(1).max(200).optional(),
   description: z.string().min(10).max(2000).optional(),
