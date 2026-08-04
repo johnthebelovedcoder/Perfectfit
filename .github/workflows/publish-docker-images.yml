@@ -78,6 +78,7 @@ jobs:
             PORT=${{ matrix.port }}
             NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL || 'http://localhost:3001' }}
             NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=${{ vars.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'dbzbeaxfm' }}
+            NEXT_PUBLIC_STOREFRONT_URL=${{ vars.NEXT_PUBLIC_STOREFRONT_URL || 'https://perfectfithq.com' }}
             NEXT_PUBLIC_SELLER_URL=${{ vars.NEXT_PUBLIC_SELLER_URL || 'https://seller.perfectfithq.com' }}
             NEXT_PUBLIC_ADMIN_URL=${{ vars.NEXT_PUBLIC_ADMIN_URL || 'https://admin.perfectfithq.com' }}
             NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=${{ vars.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}

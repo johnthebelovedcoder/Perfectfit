@@ -63,7 +63,7 @@ export function PhotoUpload({ value, onChange, max = 8 }: PhotoUploadProps) {
           <label className="flex aspect-square cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-200 hover:bg-gray-50 transition-colors">
             <Upload className="h-4 w-4 text-gray-400" />
             <span className="mt-1 text-xs text-gray-400">{uploading ? "Uploading…" : "Add"}</span>
-            <input type="file" accept="image/jpeg,image/png,image/webp" multiple className="hidden" disabled={uploading}
+            <input type="file" accept="image/*,.heic,.heif" multiple className="hidden" disabled={uploading}
               onChange={(e) => e.target.files && void handleFiles(e.target.files)} />
           </label>
         )}

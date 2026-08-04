@@ -138,4 +138,21 @@ export class ItemsService {
 
     return unpublished;
   }
+
+  /**
+   * Archive (soft-delete) an item: removes it from the storefront, admin catalogue
+   * and search index while preserving order/payout history. A sold item is kept —
+   * archiving it would hide it from the seller's own sales record.
+   */
+  async remove(id: string) {
+    const item = await this.repo.findById(id);
+    if (!item) throw new NotFoundException("Item not found");
+    if (item.soldAt) throw new BadRequestException("Sold items cannot be archived");
+
+    const archived = await this.repo.softDelete(id);
+    // Drop it from the search index (reuses the "unpublish" action → removeItem).
+    await this.searchSyncQueue.add("sync-item", { itemId: id, action: "unpublish" }, JOB_OPTS);
+
+    return archived;
+  }
 }

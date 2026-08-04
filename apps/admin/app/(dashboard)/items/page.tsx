@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Image from "next/image";
-import { Search, Eye, Globe, EyeOff, Plus, X } from "lucide-react";
+import { Search, Eye, Globe, EyeOff, Plus, X, Trash2 } from "lucide-react";
 import { api } from "@/lib/api";
 import { getCloudinaryUrl, formatPrice } from "@thread/utils";
 import {
@@ -61,6 +61,7 @@ export default function CataloguePage() {
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState({ ...BLANK_FORM });
   const [formError, setFormError] = useState<string | null>(null);
+  const [confirmArchive, setConfirmArchive] = useState<AdminItem | null>(null);
 
   const publishMutation = useMutation({
     mutationFn: (id: string) => api.post<unknown>(`/items/${id}/publish`, {}),
@@ -83,6 +84,12 @@ export default function CataloguePage() {
       setFormError(null);
     },
     onError: (err: unknown) => setFormError(err instanceof Error ? err.message : "Failed to create item"),
+  });
+
+  const archiveMutation = useMutation({
+    mutationFn: (id: string) => api.delete<unknown>(`/items/${id}`),
+    onSuccess: () => { setMutationError(null); setConfirmArchive(null); void qc.invalidateQueries({ queryKey: ["admin-items-all"] }); },
+    onError: (err: unknown) => setMutationError(err instanceof Error ? err.message : "Failed to archive item"),
   });
 
   const filtered = items.filter((i) => {
@@ -260,6 +267,15 @@ export default function CataloguePage() {
                             </button>
                           )
                         )}
+                        {!item.soldAt && (
+                          <button
+                            onClick={() => setConfirmArchive(item)}
+                            title="Archive (remove from catalogue)"
+                            className="text-gray-300 hover:text-red-500 transition-colors"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -273,6 +289,41 @@ export default function CataloguePage() {
         )}
       </div>
     </div>
+
+      {/* Archive confirmation */}
+      {confirmArchive && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-50">
+                <Trash2 className="h-5 w-5 text-red-500" />
+              </div>
+              <div>
+                <h2 className="font-semibold text-gray-900">Archive this item?</h2>
+                <p className="text-sm text-gray-500 mt-1">
+                  <span className="font-medium text-gray-700">{confirmArchive.title}</span> will be removed from the storefront and catalogue. Order history is kept, and support can restore it if needed.
+                </p>
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                onClick={() => setConfirmArchive(null)}
+                disabled={archiveMutation.isPending}
+                className="px-4 py-2 text-sm text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50 disabled:opacity-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => archiveMutation.mutate(confirmArchive.id)}
+                disabled={archiveMutation.isPending}
+                className="px-5 py-2 text-sm font-medium bg-red-600 hover:bg-red-700 text-white rounded-xl disabled:opacity-50 transition-colors"
+              >
+                {archiveMutation.isPending ? "Archiving…" : "Archive Item"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Add Item Modal */}
       {showAdd && (

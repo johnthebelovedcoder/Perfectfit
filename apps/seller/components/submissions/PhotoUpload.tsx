@@ -94,7 +94,7 @@ export function PhotoUpload({ value, onChange }: PhotoUploadProps) {
             <span className="mt-1 text-xs text-muted-foreground">{uploading ? "Uploading..." : "Add Photo"}</span>
             <input
               type="file"
-              accept="image/jpeg,image/png,image/webp"
+              accept="image/*,.heic,.heif"
               multiple
               className="hidden"
               disabled={uploading}

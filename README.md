@@ -95,9 +95,8 @@ Sellers submit from the seller portal Profile page; admins approve or reject on 
 
 > **One-off, on the deploy that first adds the KYC columns:** run [`backfill-kyc.sql`](packages/database/prisma/backfill-kyc.sql) once so pre-existing sellers are grandfathered to `APPROVED`. Skip it and every current seller's payouts freeze until they complete KYC. The script is idempotent — safe to re-run.
 > ```bash
-> docker compose exec api pnpm --filter @thread/database exec \
->   prisma db execute --url "$DATABASE_URL" \
->   --file /app/packages/database/prisma/backfill-kyc.sql
+> # sh -c so $DATABASE_URL expands INSIDE the container (where it's set), not on the host
+> docker compose exec api sh -c 'pnpm --filter @thread/database exec prisma db execute --url "$DATABASE_URL" --file /app/packages/database/prisma/backfill-kyc.sql'
 > ```
 
 ## Production notes

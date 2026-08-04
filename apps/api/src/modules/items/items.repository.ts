@@ -196,4 +196,17 @@ export class ItemsRepository {
       data: { isLive: false, soldAt: new Date() },
     });
   }
+
+  /**
+   * Soft-delete (archive): sets deletedAt and drops the item offline. We never
+   * hard-delete — items may be referenced by orders, payouts and reviews, and
+   * every read path already filters `deletedAt: null`, so this removes it from
+   * the storefront and admin catalogue while preserving history.
+   */
+  async softDelete(id: string) {
+    return this.db.item.update({
+      where: { id },
+      data: { isLive: false, deletedAt: new Date() },
+    });
+  }
 }

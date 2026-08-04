@@ -3,6 +3,7 @@ import {
   Get,
   Patch,
   Post,
+  Delete,
   Body,
   Param,
   Query,
@@ -95,6 +96,13 @@ export class ItemsController {
   @Roles("ADMIN")
   async createFromSubmission(@Param("submissionId") submissionId: string) {
     const data = await this.itemsService.createFromSubmission(submissionId);
+    return { data };
+  }
+
+  @Delete(":id")
+  @Roles("ADMIN")
+  async remove(@Param("id") id: string) {
+    const data = await this.itemsService.remove(id);
     return { data };
   }
 }
