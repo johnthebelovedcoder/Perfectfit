@@ -49,6 +49,17 @@ export class ItemsController {
     return { data: result.items, meta: { total: result.total, hasMore: result.hasMore, limit } };
   }
 
+  @Get("archived")
+  @Roles("ADMIN")
+  async findArchived(
+    @Query("page", new DefaultValuePipe(1), ParseIntPipe) page: number,
+    @Query("limit", new DefaultValuePipe(50), ParseIntPipe) limit: number,
+    @Query("search") search?: string
+  ) {
+    const result = await this.itemsService.findArchived(page, limit, search);
+    return { data: result.items, meta: { total: result.total, hasMore: result.hasMore, limit } };
+  }
+
   @Public()
   @Header("Cache-Control", "public, s-maxage=60, stale-while-revalidate=300")
   @Get(":slug")
@@ -96,6 +107,14 @@ export class ItemsController {
   @Roles("ADMIN")
   async createFromSubmission(@Param("submissionId") submissionId: string) {
     const data = await this.itemsService.createFromSubmission(submissionId);
+    return { data };
+  }
+
+  @Post(":id/restore")
+  @Roles("ADMIN")
+  @HttpCode(200)
+  async restore(@Param("id") id: string) {
+    const data = await this.itemsService.restore(id);
     return { data };
   }
 

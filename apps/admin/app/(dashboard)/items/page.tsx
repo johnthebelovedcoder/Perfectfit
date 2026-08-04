@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Image from "next/image";
-import { Search, Eye, Globe, EyeOff, Plus, X, Trash2 } from "lucide-react";
+import { Search, Eye, Globe, EyeOff, Plus, X, Trash2, RotateCcw } from "lucide-react";
 import { api } from "@/lib/api";
 import { getCloudinaryUrl, formatPrice } from "@thread/utils";
 import {
@@ -47,7 +47,7 @@ export default function CataloguePage() {
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
   const [catFilter, setCatFilter] = useState("All");
-  const [statusFilter, setStatusFilter] = useState<"all" | "live" | "draft" | "sold">("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "live" | "draft" | "sold" | "archived">("all");
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["admin-items-all"],
@@ -55,7 +55,13 @@ export default function CataloguePage() {
     refetchInterval: 30_000,
   });
 
+  const { data: archivedData, isLoading: archivedLoading } = useQuery({
+    queryKey: ["admin-items-archived"],
+    queryFn: () => api.get<AdminItem[]>("/items/archived?limit=200"),
+  });
+
   const items = data ?? [];
+  const archivedItems = archivedData ?? [];
 
   const [mutationError, setMutationError] = useState<string | null>(null);
   const [showAdd, setShowAdd] = useState(false);
@@ -88,20 +94,42 @@ export default function CataloguePage() {
 
   const archiveMutation = useMutation({
     mutationFn: (id: string) => api.delete<unknown>(`/items/${id}`),
-    onSuccess: () => { setMutationError(null); setConfirmArchive(null); void qc.invalidateQueries({ queryKey: ["admin-items-all"] }); },
+    onSuccess: () => {
+      setMutationError(null); setConfirmArchive(null);
+      void qc.invalidateQueries({ queryKey: ["admin-items-all"] });
+      void qc.invalidateQueries({ queryKey: ["admin-items-archived"] });
+    },
     onError: (err: unknown) => setMutationError(err instanceof Error ? err.message : "Failed to archive item"),
   });
 
-  const filtered = items.filter((i) => {
+  const restoreMutation = useMutation({
+    mutationFn: (id: string) => api.post<unknown>(`/items/${id}/restore`, {}),
+    onSuccess: () => {
+      setMutationError(null);
+      void qc.invalidateQueries({ queryKey: ["admin-items-all"] });
+      void qc.invalidateQueries({ queryKey: ["admin-items-archived"] });
+    },
+    onError: (err: unknown) => setMutationError(err instanceof Error ? err.message : "Failed to restore item"),
+  });
+
+  const matchesSearchCat = (i: AdminItem) => {
     const matchCat = catFilter === "All" || i.category === catFilter;
     const q = search.toLowerCase();
     const matchSearch = !q || i.title.toLowerCase().includes(q) || (i.brand ?? "").toLowerCase().includes(q);
-    const matchStatus =
+    return matchCat && matchSearch;
+  };
+
+  const isArchivedView = statusFilter === "archived";
+
+  const filtered = (isArchivedView ? archivedItems : items).filter((i) => {
+    if (!matchesSearchCat(i)) return false;
+    if (isArchivedView) return true;
+    return (
       statusFilter === "all" ||
       (statusFilter === "live" && i.isLive && !i.soldAt) ||
       (statusFilter === "draft" && !i.isLive && !i.soldAt) ||
-      (statusFilter === "sold" && !!i.soldAt);
-    return matchCat && matchSearch && matchStatus;
+      (statusFilter === "sold" && !!i.soldAt)
+    );
   });
 
   const counts = {
@@ -109,6 +137,7 @@ export default function CataloguePage() {
     live: items.filter((i) => i.isLive && !i.soldAt).length,
     draft: items.filter((i) => !i.isLive && !i.soldAt).length,
     sold: items.filter((i) => !!i.soldAt).length,
+    archived: archivedItems.length,
   };
 
   return (
@@ -132,7 +161,7 @@ export default function CataloguePage() {
 
       {/* Status tabs */}
       <div className="flex gap-1 border-b border-gray-200">
-        {(["all", "live", "draft", "sold"] as const).map((s) => (
+        {(["all", "live", "draft", "sold", "archived"] as const).map((s) => (
           <button
             key={s}
             onClick={() => setStatusFilter(s)}
@@ -165,7 +194,7 @@ export default function CataloguePage() {
       </div>
 
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-        {isLoading ? (
+        {(isArchivedView ? archivedLoading : isLoading) ? (
           <div className="py-16 text-center text-gray-400 text-sm">Loading catalogue…</div>
         ) : (
           <table className="w-full text-sm">
@@ -227,17 +256,28 @@ export default function CataloguePage() {
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1.5">
                         <span className={`w-2 h-2 rounded-full ${
-                          item.soldAt ? "bg-gray-400" : item.isLive ? "bg-emerald-500" : "bg-amber-400"
+                          isArchivedView ? "bg-gray-300" : item.soldAt ? "bg-gray-400" : item.isLive ? "bg-emerald-500" : "bg-amber-400"
                         }`} />
                         <span className={`text-xs font-medium ${
-                          item.soldAt ? "text-gray-500" : item.isLive ? "text-emerald-600" : "text-amber-600"
+                          isArchivedView ? "text-gray-400" : item.soldAt ? "text-gray-500" : item.isLive ? "text-emerald-600" : "text-amber-600"
                         }`}>
-                          {item.soldAt ? "Sold" : item.isLive ? "Live" : "Draft"}
+                          {isArchivedView ? "Archived" : item.soldAt ? "Sold" : item.isLive ? "Live" : "Draft"}
                         </span>
                       </div>
                     </td>
                     <td className="px-5 py-3">
                       <div className="flex items-center justify-end gap-2">
+                        {isArchivedView ? (
+                          <button
+                            onClick={() => restoreMutation.mutate(item.id)}
+                            disabled={restoreMutation.isPending}
+                            title="Restore to catalogue (as draft)"
+                            className="flex items-center gap-1 text-xs border border-gray-200 text-gray-700 hover:bg-gray-50 px-2.5 py-1 rounded-lg disabled:opacity-50 transition-colors"
+                          >
+                            <RotateCcw className="h-3 w-3" /> Restore
+                          </button>
+                        ) : (
+                        <>
                         <a
                           href={`${process.env.NEXT_PUBLIC_STOREFRONT_URL ?? "http://localhost:3000"}/item/${item.slug}`}
                           target="_blank"
@@ -275,6 +315,8 @@ export default function CataloguePage() {
                           >
                             <Trash2 className="h-4 w-4" />
                           </button>
+                        )}
+                        </>
                         )}
                       </div>
                     </td>

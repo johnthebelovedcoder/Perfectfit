@@ -110,6 +110,36 @@ export class ItemsRepository {
     return { items, total, hasMore: (page - 1) * limit + items.length < total };
   }
 
+  /** Archived (soft-deleted) items only, newest-archived first. */
+  async findArchived(page: number, limit: number, search?: string) {
+    const where: Record<string, unknown> = { NOT: { deletedAt: null } };
+    if (search) {
+      where["OR"] = [
+        { title: { contains: search, mode: "insensitive" } },
+        { brand: { contains: search, mode: "insensitive" } },
+      ];
+    }
+    const [items, total] = await Promise.all([
+      this.db.item.findMany({
+        where,
+        orderBy: { deletedAt: "desc" },
+        skip: (page - 1) * limit,
+        take: limit,
+        include: { submission: { select: { seller: { select: { firstName: true, lastName: true } } } } },
+      }),
+      this.db.item.count({ where }),
+    ]);
+    return { items, total, hasMore: (page - 1) * limit + items.length < total };
+  }
+
+  /** Restore an archived item — comes back offline (draft), ready to re-publish. */
+  async restore(id: string) {
+    return this.db.item.update({
+      where: { id },
+      data: { deletedAt: null },
+    });
+  }
+
   async findBySlug(slug: string) {
     const item = await this.db.withRetry(() =>
       this.db.item.findFirst({

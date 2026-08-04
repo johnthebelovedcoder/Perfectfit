@@ -27,6 +27,18 @@ export class ItemsService {
     return this.repo.findAllForAdmin(page, limit, search);
   }
 
+  async findArchived(page: number, limit: number, search?: string) {
+    return this.repo.findArchived(page, limit, search);
+  }
+
+  /** Restore an archived item back to the catalogue (as an offline draft). */
+  async restore(id: string) {
+    const item = await this.repo.findById(id);
+    if (!item) throw new NotFoundException("Item not found");
+    if (!item.deletedAt) throw new BadRequestException("Item is not archived");
+    return this.repo.restore(id);
+  }
+
   async findBySlug(slug: string) {
     const item = await this.repo.findBySlug(slug);
     if (!item) throw new NotFoundException("Item not found");
