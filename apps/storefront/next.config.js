@@ -13,6 +13,24 @@ const withPWA = require("@ducanh2912/next-pwa").default({
   fallbacks: {
     document: "/offline",
   },
+  // Keep the default page/asset caching, but make catalogue/API reads NetworkFirst
+  // so a freshly-published item shows up straight away instead of a stale cached
+  // list. Falls back to cache only when the network is unavailable (offline).
+  extendDefaultRuntimeCaching: true,
+  workboxOptions: {
+    runtimeCaching: [
+      {
+        urlPattern: ({ url }) => /\/v1\/(items|search)/.test(url.href),
+        handler: "NetworkFirst",
+        options: {
+          cacheName: "thread-catalogue-api",
+          networkTimeoutSeconds: 5,
+          expiration: { maxEntries: 64, maxAgeSeconds: 60 },
+          cacheableResponse: { statuses: [0, 200] },
+        },
+      },
+    ],
+  },
 });
 
 const nextConfig = {

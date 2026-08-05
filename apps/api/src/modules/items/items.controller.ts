@@ -28,7 +28,7 @@ export class ItemsController {
   constructor(private itemsService: ItemsService) {}
 
   @Public()
-  @Header("Cache-Control", "public, s-maxage=60, stale-while-revalidate=300")
+  @Header("Cache-Control", "public, s-maxage=15, stale-while-revalidate=30")
   @Get()
   async findPublic(@Query(new ZodValidationPipe(CatalogueFilterSchema)) filter: CatalogueFilter) {
     const result = await this.itemsService.findPublic(filter);
@@ -61,7 +61,7 @@ export class ItemsController {
   }
 
   @Public()
-  @Header("Cache-Control", "public, s-maxage=60, stale-while-revalidate=300")
+  @Header("Cache-Control", "public, s-maxage=15, stale-while-revalidate=30")
   @Get(":slug")
   async findBySlug(@Param("slug") slug: string) {
     const data = await this.itemsService.findBySlug(slug);
