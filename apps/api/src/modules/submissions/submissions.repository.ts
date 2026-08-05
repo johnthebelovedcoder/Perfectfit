@@ -77,4 +77,8 @@ export class SubmissionsRepository {
       data: { status, ...extra },
     });
   }
+
+  async updateContent(id: string, data: Record<string, unknown>) {
+    return this.db.submission.update({ where: { id }, data });
+  }
 }

@@ -21,6 +21,22 @@ export const CreateSubmissionSchema = z.object({
 });
 export type CreateSubmission = z.infer<typeof CreateSubmissionSchema>;
 
+/** Seller edits to their own submission — only allowed while it's still under
+ * review (Pending Review / More Info Needed). All fields optional (partial edit). */
+export const UpdateSubmissionSchema = z.object({
+  category: ItemCategorySchema.optional(),
+  itemType: z.string().min(1).max(100).optional(),
+  brand: z.string().max(100).nullish(),
+  size: z.string().min(1).max(20).optional(),
+  genderTarget: GenderTargetSchema.optional(),
+  condition: ItemConditionSchema.optional(),
+  conditionNote: z.string().max(500).nullish(),
+  photos: z.array(z.string()).min(3, "At least 3 photos required").max(8).optional(),
+  sellerDescription: z.string().min(10).max(2000).optional(),
+  desiredPayoutPrice: z.number().int().positive().optional(),
+});
+export type UpdateSubmission = z.infer<typeof UpdateSubmissionSchema>;
+
 export const ReviewSubmissionSchema = z.discriminatedUnion("decision", [
   z.object({
     decision: z.literal("ACCEPT"),

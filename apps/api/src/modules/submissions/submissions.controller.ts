@@ -19,11 +19,13 @@ import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe";
 import { z } from "zod";
 import {
   CreateSubmissionSchema,
+  UpdateSubmissionSchema,
   ReviewSubmissionSchema,
   SellerNegotiationResponseSchema,
 } from "@thread/types";
 import type {
   CreateSubmission,
+  UpdateSubmission,
   ReviewSubmission,
   SellerNegotiationResponse,
   SessionUser,
@@ -74,6 +76,17 @@ export class SubmissionsController {
   @Roles("SELLER", "ADMIN")
   async findOne(@Param("id") id: string, @CurrentUser() user: SessionUser) {
     const data = await this.submissionsService.findById(id, user);
+    return { data };
+  }
+
+  @Patch(":id")
+  @Roles("SELLER")
+  async updateMine(
+    @Param("id") id: string,
+    @Body(new ZodValidationPipe(UpdateSubmissionSchema)) dto: UpdateSubmission,
+    @CurrentUser() user: SessionUser
+  ) {
+    const data = await this.submissionsService.updateSubmission(id, dto, user);
     return { data };
   }
 

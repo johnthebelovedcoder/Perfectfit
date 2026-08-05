@@ -12,6 +12,7 @@ import { ItemsService } from "../items/items.service";
 import { NOTIFICATION_QUEUE, IMAGE_MIGRATE_QUEUE, JOB_OPTS } from "../../queues/queue.constants";
 import type {
   CreateSubmission,
+  UpdateSubmission,
   ReviewSubmission,
   NegotiatePrice,
   SellerNegotiationResponse,
@@ -48,6 +49,17 @@ export class SubmissionsService {
     );
 
     return submission;
+  }
+
+  /** Seller edits their own submission — only while it's still under review. */
+  async updateSubmission(id: string, dto: UpdateSubmission, user: SessionUser) {
+    const submission = await this.repo.findById(id);
+    if (!submission) throw new NotFoundException("Submission not found");
+    if (submission.seller.userId !== user.id) throw new ForbiddenException();
+    if (!["PENDING_REVIEW", "AWAITING_MORE_INFO"].includes(submission.status)) {
+      throw new BadRequestException("This submission can no longer be edited");
+    }
+    return this.repo.updateContent(id, { ...dto });
   }
 
   async findById(id: string, user: SessionUser) {
