@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Image from "next/image";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, ArrowLeft, Check, X, DollarSign, MessageCircle, PackagePlus, Globe } from "lucide-react";
+import { ChevronLeft, ChevronRight, ArrowLeft, Check, X, DollarSign, MessageCircle, Globe } from "lucide-react";
 import { api } from "@/lib/api";
 import { getCloudinaryUrl, formatPrice } from "@thread/utils";
 import { categoryLabel } from "@thread/types";
@@ -115,24 +115,8 @@ export default function SubmissionDetailPage({ params }: { params: { id: string 
     onError,
   });
 
-  const receivedMutation = useMutation({
-    mutationFn: () => api.patch<unknown>(`/submissions/${id}/received`, {}),
-    onSuccess: () => { setActionError(null); void qc.invalidateQueries({ queryKey: ["submission", id] }); },
-    onError,
-  });
-
   const createListingMutation = useMutation({
     mutationFn: () => api.post<{ id: string; slug: string }>(`/items/from-submission/${id}`, {}),
-    onSuccess: () => {
-      setActionError(null);
-      void qc.invalidateQueries({ queryKey: ["submission", id] });
-      void qc.invalidateQueries({ queryKey: ["admin-items-all"] });
-    },
-    onError,
-  });
-
-  const publishListingMutation = useMutation({
-    mutationFn: (itemId: string) => api.post<unknown>(`/items/${itemId}/publish`, {}),
     onSuccess: () => {
       setActionError(null);
       void qc.invalidateQueries({ queryKey: ["submission", id] });
@@ -311,7 +295,7 @@ export default function SubmissionDetailPage({ params }: { params: { id: string 
                       disabled={!retailPrice || !sellerPayout || reviewMutation.isPending}
                       onClick={() => reviewMutation.mutate({ decision: "ACCEPT", retailPrice: Math.round(parseFloat(retailPrice) * 100), agreedPayoutPrice: Math.round(parseFloat(sellerPayout) * 100), adminNote: adminNote || undefined })}
                       className="flex-1 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-lg py-2 text-sm font-medium transition-colors">
-                      {reviewMutation.isPending ? "Saving..." : "Accept & Notify Seller"}
+                      {reviewMutation.isPending ? "Saving..." : "Accept & List Live"}
                     </button>
                   </div>
                 </div>
@@ -428,57 +412,23 @@ export default function SubmissionDetailPage({ params }: { params: { id: string 
             </div>
           )}
 
-          {/* Warehouse / listing workflow */}
-          {sub.status === "ACCEPTED" && (
+          {/* Go live — approved items list on the storefront in one step. Also
+              rescues any item still sitting as accepted-but-not-live. */}
+          {["ACCEPTED", "AWAITING_SHIPMENT", "RECEIVED_AT_WAREHOUSE"].includes(sub.status) && !(sub.item && sub.item.isLive) && (
             <div className="border-t border-gray-100 pt-4 space-y-2">
-              <p className="text-sm font-semibold text-gray-900">Next Steps</p>
-              <p className="text-xs text-gray-400">Item accepted. Waiting for the seller to mark it as shipped before it can be received at the warehouse.</p>
-            </div>
-          )}
-          {sub.status === "AWAITING_SHIPMENT" && (
-            <div className="border-t border-gray-100 pt-4 space-y-2">
-              <p className="text-sm font-semibold text-gray-900">Next Steps</p>
-              <p className="text-xs text-gray-400">Seller has confirmed shipment. Mark it as received when it arrives.</p>
+              <p className="text-sm font-semibold text-gray-900">List on Storefront</p>
+              <p className="text-xs text-gray-400">This item is approved. Publish it live to the storefront now.</p>
               <button
-                onClick={() => receivedMutation.mutate()}
-                disabled={receivedMutation.isPending}
-                className="w-full flex items-center justify-center gap-2 border border-gray-200 hover:bg-gray-50 text-gray-700 rounded-xl py-2.5 text-sm font-medium transition-colors disabled:opacity-50"
+                onClick={() => createListingMutation.mutate()}
+                disabled={createListingMutation.isPending}
+                className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl py-2.5 text-sm font-medium transition-colors disabled:opacity-50"
               >
-                <PackagePlus className="h-4 w-4" />
-                {receivedMutation.isPending ? "Marking…" : "Mark as Received at Warehouse"}
+                <Globe className="h-4 w-4" />
+                {createListingMutation.isPending ? "Publishing…" : "List on Storefront (Go Live)"}
               </button>
-            </div>
-          )}
-
-          {sub.status === "RECEIVED_AT_WAREHOUSE" && (
-            <div className="border-t border-gray-100 pt-4 space-y-2">
-              <p className="text-sm font-semibold text-gray-900">Create Listing</p>
-              <p className="text-xs text-gray-400">Item is in the warehouse. Create a catalogue listing, then publish it to the storefront.</p>
-              {/* If listing already exists (survives page refresh), show Publish button */}
-              {sub.item && !sub.item.isLive ? (
-                <button
-                  onClick={() => publishListingMutation.mutate(sub.item!.id)}
-                  disabled={publishListingMutation.isPending}
-                  className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl py-2.5 text-sm font-medium transition-colors disabled:opacity-50"
-                >
-                  <Globe className="h-4 w-4" />
-                  {publishListingMutation.isPending ? "Publishing…" : "Publish to Storefront"}
-                </button>
-              ) : !sub.item ? (
-                <>
-                  <button
-                    onClick={() => createListingMutation.mutate()}
-                    disabled={createListingMutation.isPending}
-                    className="w-full flex items-center justify-center gap-2 bg-gray-900 hover:bg-black text-white rounded-xl py-2.5 text-sm font-medium transition-colors disabled:opacity-50"
-                  >
-                    <PackagePlus className="h-4 w-4" />
-                    {createListingMutation.isPending ? "Creating…" : "Create Catalogue Listing"}
-                  </button>
-                  {createListingMutation.isError && (
-                    <p className="text-xs text-red-500">{(createListingMutation.error as Error).message}</p>
-                  )}
-                </>
-              ) : null}
+              {createListingMutation.isError && (
+                <p className="text-xs text-red-500">{(createListingMutation.error as Error).message}</p>
+              )}
             </div>
           )}
 

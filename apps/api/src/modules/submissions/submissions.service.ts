@@ -8,6 +8,7 @@ import { InjectQueue } from "@nestjs/bull";
 import type { Queue } from "bull";
 import { SubmissionsRepository } from "./submissions.repository";
 import { DatabaseService } from "../../common/database/database.service";
+import { ItemsService } from "../items/items.service";
 import { NOTIFICATION_QUEUE, IMAGE_MIGRATE_QUEUE, JOB_OPTS } from "../../queues/queue.constants";
 import type {
   CreateSubmission,
@@ -22,6 +23,7 @@ export class SubmissionsService {
   constructor(
     private repo: SubmissionsRepository,
     private db: DatabaseService,
+    private itemsService: ItemsService,
     @InjectQueue(NOTIFICATION_QUEUE) private notificationQueue: Queue,
     @InjectQueue(IMAGE_MIGRATE_QUEUE) private imageMigrateQueue: Queue
   ) {}
@@ -103,15 +105,13 @@ export class SubmissionsService {
           { submissionId: id, sellerId: submission.sellerId },
           JOB_OPTS
         );
-      } else {
-        await this.notificationQueue.add(
-          "submission-accepted",
-          { submissionId: id, sellerId: submission.sellerId },
-          JOB_OPTS
-        );
+        return updated;
       }
 
-      return updated;
+      // Final acceptance — list the item live immediately (sets submission → LIVE
+      // and notifies the seller via "item-live").
+      await this.itemsService.createFromSubmission(id);
+      return this.repo.findById(id);
     }
 
     if (dto.decision === "REJECT") {
@@ -162,12 +162,9 @@ export class SubmissionsService {
     }
 
     if (dto.accept) {
+      // Seller accepted the counter-offer — list the item live immediately.
       await this.repo.updateStatus(id, "ACCEPTED");
-      await this.notificationQueue.add(
-        "submission-accepted",
-        { submissionId: id, sellerId: submission.sellerId },
-        JOB_OPTS
-      );
+      await this.itemsService.createFromSubmission(id);
     } else {
       // Seller declined — mark rejected so it doesn't re-enter the review queue
       await this.db.submission.update({

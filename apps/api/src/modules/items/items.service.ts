@@ -60,6 +60,12 @@ export class ItemsService {
     return item;
   }
 
+  /**
+   * Turn an accepted seller submission into a LIVE catalogue item in one step.
+   * Approved seller items go live immediately (like admin-added items) — there is
+   * no separate ship-to-warehouse-then-publish gate. Idempotent: if the listing
+   * already exists it just ensures it's live.
+   */
   async createFromSubmission(submissionId: string) {
     const submission = await this.db.submission.findUnique({
       where: { id: submissionId },
@@ -67,17 +73,28 @@ export class ItemsService {
     });
 
     if (!submission) throw new NotFoundException("Submission not found");
-    if (submission.status !== "RECEIVED_AT_WAREHOUSE") {
-      throw new BadRequestException("Item must be received at warehouse before listing");
+
+    // Idempotent: listing already exists — make sure it's live and return it.
+    if (submission.item) {
+      if (!submission.item.isLive) {
+        await this.repo.publish(submission.item.id);
+        await this.db.submission.update({ where: { id: submissionId }, data: { status: "LIVE" } });
+        await this.searchSyncQueue.add("sync-item", { itemId: submission.item.id, action: "publish" }, JOB_OPTS);
+      }
+      return submission.item;
     }
-    if (submission.item) throw new BadRequestException("Item already created for this submission");
+
+    // Listable from acceptance onward (the warehouse steps are optional now).
+    const listable = ["ACCEPTED", "AWAITING_SHIPMENT", "RECEIVED_AT_WAREHOUSE"];
+    if (!listable.includes(submission.status)) {
+      throw new BadRequestException("Submission must be accepted before it can be listed");
+    }
     if (!submission.retailPrice || !submission.agreedPayoutPrice) {
       throw new BadRequestException("Retail price and payout price must be set before listing");
     }
 
     const titleBase = `${submission.brand ?? submission.itemType} ${categoryLabel(submission.category)}`;
-    const tempId = submission.id;
-    const slug = generateItemSlug(titleBase, tempId);
+    const slug = generateItemSlug(titleBase, submission.id);
 
     const item = await this.repo.create({
       submissionId,
@@ -95,13 +112,17 @@ export class ItemsService {
       agreedPayoutPrice: submission.agreedPayoutPrice,
     });
 
-    await this.imageMigrateQueue.add(
-      "migrate-images",
-      { submissionId, itemId: item.id, photos: submission.photos },
-      JOB_OPTS
-    );
+    // Go live immediately, mark the submission LIVE, and index for search.
+    await this.repo.publish(item.id);
+    await this.db.submission.update({ where: { id: submissionId }, data: { status: "LIVE" } });
 
-    return item;
+    await Promise.all([
+      this.searchSyncQueue.add("sync-item", { itemId: item.id, action: "publish" }, JOB_OPTS),
+      this.imageMigrateQueue.add("migrate-images", { submissionId, itemId: item.id, photos: submission.photos }, JOB_OPTS),
+      this.notificationQueue.add("item-live", { itemId: item.id, submissionId }, JOB_OPTS),
+    ]);
+
+    return { ...item, isLive: true };
   }
 
   async update(id: string, dto: UpdateItem) {
