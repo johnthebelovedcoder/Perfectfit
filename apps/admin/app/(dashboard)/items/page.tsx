@@ -372,7 +372,10 @@ export default function CataloguePage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-              <h2 className="font-semibold text-gray-900">Add Item to Catalogue</h2>
+              <div>
+                <h2 className="font-semibold text-gray-900">Add Item to Catalogue</h2>
+                <p className="text-xs text-gray-400 mt-0.5">Goes live on the storefront as soon as you create it</p>
+              </div>
               <button onClick={() => { setShowAdd(false); setForm({ ...BLANK_FORM }); setFormError(null); }} className="text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>
             </div>
             <div className="overflow-y-auto p-6 space-y-5">
@@ -464,7 +467,7 @@ export default function CataloguePage() {
                 }}
                 className="px-5 py-2 text-sm font-medium bg-gray-900 hover:bg-gray-700 text-white rounded-xl disabled:opacity-50 transition-colors"
               >
-                {addMutation.isPending ? "Creating…" : "Create Item"}
+                {addMutation.isPending ? "Publishing…" : "Create & Publish"}
               </button>
             </div>
           </div>

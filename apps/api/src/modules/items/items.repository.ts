@@ -179,8 +179,9 @@ export class ItemsRepository {
     retailPrice: number;
     agreedPayoutPrice: number;
   }) {
+    // Admin-added items go live immediately (no separate publish step).
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return this.db.item.create({ data: data as any });
+    return this.db.item.create({ data: { ...data, isLive: true, publishedAt: new Date() } as any });
   }
 
   async create(data: {

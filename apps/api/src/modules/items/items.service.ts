@@ -53,7 +53,11 @@ export class ItemsService {
 
   async createDirect(dto: CreateItemDirect) {
     const slug = generateItemSlug(dto.title, Date.now().toString(36));
-    return this.repo.createDirect({ ...dto, slug });
+    // Admin-added items are published on creation; index them for search so they
+    // show up on the storefront immediately without a separate publish step.
+    const item = await this.repo.createDirect({ ...dto, slug });
+    await this.searchSyncQueue.add("sync-item", { itemId: item.id, action: "publish" }, JOB_OPTS);
+    return item;
   }
 
   async createFromSubmission(submissionId: string) {
