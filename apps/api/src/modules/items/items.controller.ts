@@ -18,9 +18,10 @@ import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard";
 import { RolesGuard } from "../../common/guards/roles.guard";
 import { Roles } from "../../common/decorators/roles.decorator";
 import { Public } from "../../common/decorators/public.decorator";
+import { CurrentUser } from "../../common/decorators/current-user.decorator";
 import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe";
 import { UpdateItemSchema, CatalogueFilterSchema, CreateItemDirectSchema } from "@thread/types";
-import type { UpdateItem, CatalogueFilter, CreateItemDirect } from "@thread/types";
+import type { UpdateItem, CatalogueFilter, CreateItemDirect, SessionUser } from "@thread/types";
 
 @Controller("items")
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -69,12 +70,13 @@ export class ItemsController {
   }
 
   @Patch(":id")
-  @Roles("ADMIN")
+  @Roles("ADMIN", "SELLER")
   async update(
     @Param("id") id: string,
-    @Body(new ZodValidationPipe(UpdateItemSchema)) dto: UpdateItem
+    @Body(new ZodValidationPipe(UpdateItemSchema)) dto: UpdateItem,
+    @CurrentUser() user: SessionUser
   ) {
-    const data = await this.itemsService.update(id, dto);
+    const data = await this.itemsService.update(id, dto, user);
     return { data };
   }
 

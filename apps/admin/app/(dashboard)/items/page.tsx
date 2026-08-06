@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Image from "next/image";
-import { Search, Eye, Globe, EyeOff, Plus, X, Trash2, RotateCcw } from "lucide-react";
+import { Search, Eye, Globe, EyeOff, Plus, X, Trash2, RotateCcw, Pencil } from "lucide-react";
 import { api } from "@/lib/api";
 import { getCloudinaryUrl, formatPrice } from "@thread/utils";
 import {
@@ -23,6 +23,9 @@ interface AdminItem {
   title: string;
   brand: string | null;
   category: string;
+  itemType: string;
+  genderTarget: string;
+  description: string;
   size: string;
   condition: string;
   photos: string[];
@@ -68,6 +71,9 @@ export default function CataloguePage() {
   const [form, setForm] = useState({ ...BLANK_FORM });
   const [formError, setFormError] = useState<string | null>(null);
   const [confirmArchive, setConfirmArchive] = useState<AdminItem | null>(null);
+  const [editItem, setEditItem] = useState<AdminItem | null>(null);
+  const [editForm, setEditForm] = useState({ ...BLANK_FORM });
+  const [editError, setEditError] = useState<string | null>(null);
 
   const publishMutation = useMutation({
     mutationFn: (id: string) => api.post<unknown>(`/items/${id}/publish`, {}),
@@ -111,6 +117,43 @@ export default function CataloguePage() {
     },
     onError: (err: unknown) => setMutationError(err instanceof Error ? err.message : "Failed to restore item"),
   });
+
+  const editMutation = useMutation({
+    mutationFn: ({ id, dto }: { id: string; dto: Record<string, unknown> }) => api.patch<unknown>(`/items/${id}`, dto),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["admin-items-all"] });
+      setEditItem(null);
+      setEditError(null);
+    },
+    onError: (err: unknown) => setEditError(err instanceof Error ? err.message : "Failed to save changes"),
+  });
+
+  function openEdit(item: AdminItem) {
+    setEditForm({
+      title: item.title, brand: item.brand ?? "", category: item.category, itemType: item.itemType,
+      size: item.size, genderTarget: item.genderTarget, condition: item.condition,
+      description: item.description ?? "", retailPrice: (item.retailPrice / 100).toString(),
+      agreedPayoutPrice: (item.agreedPayoutPrice / 100).toString(), photos: item.photos,
+    });
+    setEditError(null);
+    setEditItem(item);
+  }
+
+  function saveEdit() {
+    if (!editItem) return;
+    setEditError(null);
+    if (!editForm.title || !editForm.itemType || !editForm.size || editForm.description.trim().length < 10 || editForm.photos.length === 0) {
+      setEditError("Fill in title, item type, size, a description (10+ chars) and at least one photo"); return;
+    }
+    const retail = Math.round(parseFloat(editForm.retailPrice as string) * 100);
+    if (isNaN(retail) || retail <= 0) { setEditError("Enter a valid retail price"); return; }
+    editMutation.mutate({ id: editItem.id, dto: {
+      title: editForm.title, brand: editForm.brand || undefined, category: editForm.category,
+      itemType: editForm.itemType, size: editForm.size, genderTarget: editForm.genderTarget,
+      condition: editForm.condition, description: editForm.description, photos: editForm.photos,
+      retailPrice: retail,
+    } });
+  }
 
   const matchesSearchCat = (i: AdminItem) => {
     const matchCat = catFilter === "All" || i.category === catFilter;
@@ -287,6 +330,15 @@ export default function CataloguePage() {
                           <Eye className="h-4 w-4" />
                         </a>
                         {!item.soldAt && (
+                          <button
+                            onClick={() => openEdit(item)}
+                            title="Edit item"
+                            className="text-gray-400 hover:text-gray-700 transition-colors"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </button>
+                        )}
+                        {!item.soldAt && (
                           item.isLive ? (
                             <button
                               onClick={() => unpublishMutation.mutate(item.id)}
@@ -331,6 +383,89 @@ export default function CataloguePage() {
         )}
       </div>
     </div>
+
+      {/* Edit Item Modal */}
+      {editItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+              <div>
+                <h2 className="font-semibold text-gray-900">Edit Item</h2>
+                <p className="text-xs text-gray-400 mt-0.5">Changes apply to the live storefront immediately</p>
+              </div>
+              <button onClick={() => setEditItem(null)} className="text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>
+            </div>
+            <div className="overflow-y-auto p-6 space-y-5">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Photos</label>
+                <PhotoUpload value={editForm.photos} onChange={(ids) => setEditForm((f) => ({ ...f, photos: ids }))} />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2">
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Title</label>
+                  <input value={editForm.title} onChange={(e) => setEditForm((f) => ({ ...f, title: e.target.value }))}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-200" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Brand (optional)</label>
+                  <input value={editForm.brand} onChange={(e) => setEditForm((f) => ({ ...f, brand: e.target.value }))}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-200" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Item Type</label>
+                  <input value={editForm.itemType} onChange={(e) => setEditForm((f) => ({ ...f, itemType: e.target.value }))}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-200" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Category</label>
+                  <select value={editForm.category} onChange={(e) => setEditForm((f) => ({ ...f, category: e.target.value }))}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-200">
+                    {CATEGORY_VALUES.map((c) => <option key={c} value={c}>{categoryLabel(c)}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Size</label>
+                  <input value={editForm.size} onChange={(e) => setEditForm((f) => ({ ...f, size: e.target.value }))}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-200" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Gender</label>
+                  <select value={editForm.genderTarget} onChange={(e) => setEditForm((f) => ({ ...f, genderTarget: e.target.value }))}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-200">
+                    {GENDER_VALUES.map((g) => <option key={g} value={g}>{genderLabel(g)}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Condition</label>
+                  <select value={editForm.condition} onChange={(e) => setEditForm((f) => ({ ...f, condition: e.target.value }))}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-200">
+                    {CONDITION_VALUES.map((c) => <option key={c} value={c}>{conditionLabel(c)}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Retail Price ($)</label>
+                  <input type="number" min="0" value={editForm.retailPrice} onChange={(e) => setEditForm((f) => ({ ...f, retailPrice: e.target.value }))}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-200" />
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Description</label>
+                  <textarea value={editForm.description} onChange={(e) => setEditForm((f) => ({ ...f, description: e.target.value }))} rows={3}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-200 resize-none" />
+                </div>
+              </div>
+              {editError && <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{editError}</div>}
+            </div>
+            <div className="flex justify-end gap-3 px-6 py-4 border-t border-gray-100">
+              <button onClick={() => setEditItem(null)}
+                className="px-4 py-2 text-sm text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors">Cancel</button>
+              <button onClick={saveEdit} disabled={editMutation.isPending}
+                className="px-5 py-2 text-sm font-medium bg-gray-900 hover:bg-gray-700 text-white rounded-xl disabled:opacity-50 transition-colors">
+                {editMutation.isPending ? "Saving…" : "Save Changes"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Archive confirmation */}
       {confirmArchive && (

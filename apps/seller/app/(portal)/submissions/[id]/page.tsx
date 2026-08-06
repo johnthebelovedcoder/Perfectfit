@@ -40,7 +40,21 @@ interface SubmissionDetail {
   rejectionNote: string | null;
   createdAt: string;
   reviewedAt: string | null;
-  item: { slug: string; publishedAt: string | null } | null;
+  item: {
+    id: string;
+    slug: string;
+    publishedAt: string | null;
+    title: string;
+    description: string;
+    category: string;
+    itemType: string;
+    brand: string | null;
+    size: string;
+    genderTarget: string;
+    condition: string;
+    photos: string[];
+    soldAt: string | null;
+  } | null;
 }
 
 const STATUS_STYLE: Record<string, string> = {
@@ -195,6 +209,52 @@ export default function SubmissionDetailPage({ params }: { params: { id: string 
       desiredPayoutPrice: Math.round(dollars * 100),
       photos: editForm.photos,
     });
+  }
+
+  // ── Seller editing their LIVE listing (the catalogue item) ─────────────────
+  type ListingForm = {
+    title: string; itemType: string; brand: string; category: string;
+    size: string; genderTarget: string; condition: string; description: string; photos: string[];
+  };
+  const [listingForm, setListingForm] = useState<ListingForm | null>(null);
+  const [listingError, setListingError] = useState<string | null>(null);
+
+  const listingMutation = useMutation({
+    mutationFn: ({ itemId, dto }: { itemId: string; dto: Record<string, unknown> }) => api.patch<unknown>(`/items/${itemId}`, dto),
+    onSuccess: () => {
+      setListingError(null);
+      setListingForm(null);
+      void qc.invalidateQueries({ queryKey: ["submission", id] });
+      void qc.invalidateQueries({ queryKey: ["my-submissions"] });
+    },
+    onError: (err: unknown) => setListingError(err instanceof Error ? err.message : "Could not save changes"),
+  });
+
+  function openListingEdit(it: NonNullable<SubmissionDetail["item"]>) {
+    setListingForm({
+      title: it.title, itemType: it.itemType, brand: it.brand ?? "", category: it.category,
+      size: it.size, genderTarget: it.genderTarget, condition: it.condition,
+      description: it.description, photos: it.photos,
+    });
+    setListingError(null);
+  }
+
+  function saveListing() {
+    if (!listingForm || !sub.item) return;
+    setListingError(null);
+    if (listingForm.photos.length < 1) { setListingError("At least 1 photo is required"); return; }
+    if (listingForm.description.trim().length < 10) { setListingError("Description must be at least 10 characters"); return; }
+    listingMutation.mutate({ itemId: sub.item.id, dto: {
+      title: listingForm.title,
+      itemType: listingForm.itemType,
+      brand: listingForm.brand.trim() || undefined,
+      category: listingForm.category,
+      size: listingForm.size,
+      genderTarget: listingForm.genderTarget,
+      condition: listingForm.condition,
+      description: listingForm.description,
+      photos: listingForm.photos,
+    } });
   }
 
   if (!sub) return (
@@ -423,14 +483,24 @@ export default function SubmissionDetailPage({ params }: { params: { id: string 
         <div className="mb-6 rounded-2xl border border-emerald-200 bg-emerald-50/50 p-5 space-y-3">
           <p className="text-sm font-semibold text-emerald-900">Your item is live on the store! 🛍️</p>
           <p className="text-xs text-emerald-700">Share the link — every sale earns you {sub.agreedPayoutPrice != null ? formatPrice(sub.agreedPayoutPrice) : "your agreed payout"}.</p>
-          <a
-            href={`${STOREFRONT_URL}/item/${sub.item.slug}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium px-4 py-2.5 rounded-xl transition-colors"
-          >
-            <ExternalLink className="h-4 w-4" /> View your listing →
-          </a>
+          <div className="flex flex-wrap gap-2">
+            <a
+              href={`${STOREFRONT_URL}/item/${sub.item.slug}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium px-4 py-2.5 rounded-xl transition-colors"
+            >
+              <ExternalLink className="h-4 w-4" /> View your listing →
+            </a>
+            {sub.item && !sub.item.soldAt && (
+              <button
+                onClick={() => openListingEdit(sub.item!)}
+                className="inline-flex items-center gap-2 border border-emerald-300 text-emerald-700 hover:bg-emerald-100 text-sm font-medium px-4 py-2.5 rounded-xl transition-colors"
+              >
+                <Pencil className="h-4 w-4" /> Edit listing
+              </button>
+            )}
+          </div>
         </div>
       )}
 
@@ -642,6 +712,84 @@ export default function SubmissionDetailPage({ params }: { params: { id: string 
               <button onClick={saveEdit} disabled={editMutation.isPending}
                 className="px-5 py-2 text-sm font-medium bg-gray-900 hover:bg-black text-white rounded-xl disabled:opacity-50 transition-colors">
                 {editMutation.isPending ? "Saving…" : "Save Changes"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit live listing modal */}
+      {listingForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+              <div>
+                <h2 className="font-semibold text-gray-900">Edit Listing</h2>
+                <p className="text-xs text-gray-400 mt-0.5">Changes show on the storefront right away. The price and your payout stay the same.</p>
+              </div>
+              <button onClick={() => setListingForm(null)} className="text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>
+            </div>
+            <div className="overflow-y-auto p-6 space-y-5">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Photos</label>
+                <PhotoUpload value={listingForm.photos} onChange={(urls) => setListingForm((f) => f && ({ ...f, photos: urls }))} />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2">
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Title</label>
+                  <input value={listingForm.title} onChange={(e) => setListingForm((f) => f && ({ ...f, title: e.target.value }))}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-200" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Item Type</label>
+                  <input value={listingForm.itemType} onChange={(e) => setListingForm((f) => f && ({ ...f, itemType: e.target.value }))}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-200" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Brand (optional)</label>
+                  <input value={listingForm.brand} onChange={(e) => setListingForm((f) => f && ({ ...f, brand: e.target.value }))}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-200" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Category</label>
+                  <select value={listingForm.category} onChange={(e) => setListingForm((f) => f && ({ ...f, category: e.target.value }))}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-200">
+                    {CATEGORY_VALUES.map((c) => <option key={c} value={c}>{categoryLabel(c)}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Size</label>
+                  <input value={listingForm.size} onChange={(e) => setListingForm((f) => f && ({ ...f, size: e.target.value }))}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-200" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">For</label>
+                  <select value={listingForm.genderTarget} onChange={(e) => setListingForm((f) => f && ({ ...f, genderTarget: e.target.value }))}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-200">
+                    {EDIT_GENDERS.map((g) => <option key={g} value={g}>{g.charAt(0) + g.slice(1).toLowerCase()}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Condition</label>
+                  <select value={listingForm.condition} onChange={(e) => setListingForm((f) => f && ({ ...f, condition: e.target.value }))}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-200">
+                    {EDIT_CONDITIONS.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+                  </select>
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Description</label>
+                  <textarea value={listingForm.description} onChange={(e) => setListingForm((f) => f && ({ ...f, description: e.target.value }))} rows={3}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-200 resize-none" />
+                </div>
+              </div>
+              {listingError && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{listingError}</p>}
+            </div>
+            <div className="flex justify-end gap-3 px-6 py-4 border-t border-gray-100">
+              <button onClick={() => setListingForm(null)}
+                className="px-4 py-2 text-sm text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors">Cancel</button>
+              <button onClick={saveListing} disabled={listingMutation.isPending}
+                className="px-5 py-2 text-sm font-medium bg-gray-900 hover:bg-black text-white rounded-xl disabled:opacity-50 transition-colors">
+                {listingMutation.isPending ? "Saving…" : "Save Changes"}
               </button>
             </div>
           </div>

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from "@nestjs/common";
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from "@nestjs/common";
 import { InjectQueue } from "@nestjs/bull";
 import type { Queue } from "bull";
 import { ItemsRepository } from "./items.repository";
@@ -6,7 +6,7 @@ import { DatabaseService } from "../../common/database/database.service";
 import { NOTIFICATION_QUEUE, SEARCH_SYNC_QUEUE, IMAGE_MIGRATE_QUEUE, JOB_OPTS } from "../../queues/queue.constants";
 import { generateItemSlug } from "@thread/utils";
 import { categoryLabel } from "@thread/types";
-import type { UpdateItem, CatalogueFilter, CreateItemDirect } from "@thread/types";
+import type { UpdateItem, CatalogueFilter, CreateItemDirect, SessionUser } from "@thread/types";
 import type { Prisma } from "@thread/database";
 
 @Injectable()
@@ -125,8 +125,26 @@ export class ItemsService {
     return { ...item, isLive: true };
   }
 
-  async update(id: string, dto: UpdateItem) {
-    await this.findById(id);
+  /**
+   * Edit a catalogue item (including live ones). Admins can edit any item;
+   * sellers can edit only their own (items sourced from their submission), and
+   * cannot change the retail price — their payout is fixed, so retail only moves
+   * the platform's margin. Sold items are locked.
+   */
+  async update(id: string, dto: UpdateItem, user?: SessionUser) {
+    const existing = await this.repo.findById(id);
+    if (!existing) throw new NotFoundException("Item not found");
+
+    if (user?.role === "SELLER") {
+      const profile = await this.db.sellerProfile.findUnique({ where: { userId: user.id }, select: { id: true } });
+      if (!profile || existing.submission?.sellerId !== profile.id) {
+        throw new ForbiddenException("You can only edit your own items");
+      }
+      if (existing.soldAt) throw new BadRequestException("Sold items can no longer be edited");
+      // Retail price is admin-controlled — strip it from seller edits.
+      delete dto.retailPrice;
+    }
+
     const item = await this.repo.update(id, dto);
 
     if (item.isLive) {
