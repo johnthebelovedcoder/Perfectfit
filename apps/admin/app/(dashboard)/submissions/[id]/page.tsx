@@ -4,10 +4,19 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Image from "next/image";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, ArrowLeft, Check, X, DollarSign, MessageCircle, Globe } from "lucide-react";
+import { ChevronLeft, ChevronRight, ArrowLeft, Check, X, DollarSign, MessageCircle, Globe, Pencil } from "lucide-react";
 import { api } from "@/lib/api";
 import { getCloudinaryUrl, formatPrice } from "@thread/utils";
-import { categoryLabel } from "@thread/types";
+import { categoryLabel, CATEGORY_VALUES } from "@thread/types";
+import { PhotoUpload } from "@/components/shared/PhotoUpload";
+
+const EDIT_GENDERS = ["WOMEN", "MEN", "UNISEX"];
+const EDIT_CONDITIONS = [
+  { value: "BRAND_NEW", label: "Brand New" },
+  { value: "EXCELLENT", label: "Excellent" },
+  { value: "GOOD", label: "Good" },
+  { value: "FAIR", label: "Fair" },
+];
 
 interface SubmissionDetail {
   id: string;
@@ -125,6 +134,57 @@ export default function SubmissionDetailPage({ params }: { params: { id: string 
     onError,
   });
 
+  // ── Admin editing of submission details ────────────────────────────────────
+  type EditForm = {
+    category: string; itemType: string; brand: string; size: string;
+    genderTarget: string; condition: string; conditionNote: string;
+    sellerDescription: string; desiredPayoutDollars: string; photos: string[];
+  };
+  const [editForm, setEditForm] = useState<EditForm | null>(null);
+  const [editError, setEditError] = useState<string | null>(null);
+
+  const editMutation = useMutation({
+    mutationFn: (dto: Record<string, unknown>) => api.patch<unknown>(`/submissions/${id}`, dto),
+    onSuccess: () => {
+      setEditError(null);
+      setEditForm(null);
+      void qc.invalidateQueries({ queryKey: ["submission", id] });
+      void qc.invalidateQueries({ queryKey: ["admin-all-submissions"] });
+    },
+    onError: (err: unknown) => setEditError(err instanceof Error ? err.message : "Could not save changes"),
+  });
+
+  function openEdit(s: SubmissionDetail) {
+    setEditForm({
+      category: s.category, itemType: s.itemType, brand: s.brand ?? "", size: s.size,
+      genderTarget: s.genderTarget, condition: s.condition, conditionNote: s.conditionNote ?? "",
+      sellerDescription: s.sellerDescription, desiredPayoutDollars: (s.desiredPayoutPrice / 100).toString(),
+      photos: s.photos,
+    });
+    setEditError(null);
+  }
+
+  function saveEdit() {
+    if (!editForm) return;
+    setEditError(null);
+    if (editForm.photos.length < 3) { setEditError("At least 3 photos are required"); return; }
+    if (editForm.sellerDescription.trim().length < 10) { setEditError("Description must be at least 10 characters"); return; }
+    const dollars = parseFloat(editForm.desiredPayoutDollars);
+    if (!Number.isFinite(dollars) || dollars <= 0) { setEditError("Enter a valid payout amount"); return; }
+    editMutation.mutate({
+      category: editForm.category,
+      itemType: editForm.itemType,
+      brand: editForm.brand.trim() || null,
+      size: editForm.size,
+      genderTarget: editForm.genderTarget,
+      condition: editForm.condition,
+      conditionNote: editForm.conditionNote.trim() || null,
+      sellerDescription: editForm.sellerDescription,
+      desiredPayoutPrice: Math.round(dollars * 100),
+      photos: editForm.photos,
+    });
+  }
+
   if (!sub) {
     return (
       <div className="p-4 sm:p-8">
@@ -205,6 +265,15 @@ export default function SubmissionDetailPage({ params }: { params: { id: string 
               {STATUS_LABEL[sub.status] ?? sub.status}
             </span>
           </div>
+
+          {canReview && (
+            <button
+              onClick={() => openEdit(sub)}
+              className="flex items-center gap-1.5 text-xs font-medium text-gray-600 border border-gray-200 rounded-lg px-3 py-1.5 hover:bg-gray-50 transition-colors"
+            >
+              <Pencil className="h-3 w-3" /> Edit details
+            </button>
+          )}
 
           {/* Metadata */}
           <div className="grid grid-cols-2 gap-y-3 text-sm border-t border-gray-50 pt-4">
@@ -451,6 +520,91 @@ export default function SubmissionDetailPage({ params }: { params: { id: string 
           )}
         </div>
       </div>
+
+      {/* Edit details modal */}
+      {editForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+              <h2 className="font-semibold text-gray-900">Edit Submission</h2>
+              <button onClick={() => setEditForm(null)} className="text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>
+            </div>
+
+            <div className="overflow-y-auto p-6 space-y-5">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Photos</label>
+                <PhotoUpload value={editForm.photos} onChange={(ids) => setEditForm((f) => f && ({ ...f, photos: ids }))} />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Item Type</label>
+                  <input value={editForm.itemType} onChange={(e) => setEditForm((f) => f && ({ ...f, itemType: e.target.value }))}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-200" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Brand (optional)</label>
+                  <input value={editForm.brand} onChange={(e) => setEditForm((f) => f && ({ ...f, brand: e.target.value }))}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-200" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Category</label>
+                  <select value={editForm.category} onChange={(e) => setEditForm((f) => f && ({ ...f, category: e.target.value }))}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-200">
+                    {CATEGORY_VALUES.map((c) => <option key={c} value={c}>{categoryLabel(c)}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Size</label>
+                  <input value={editForm.size} onChange={(e) => setEditForm((f) => f && ({ ...f, size: e.target.value }))}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-200" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">For</label>
+                  <select value={editForm.genderTarget} onChange={(e) => setEditForm((f) => f && ({ ...f, genderTarget: e.target.value }))}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-200">
+                    {EDIT_GENDERS.map((g) => <option key={g} value={g}>{g.charAt(0) + g.slice(1).toLowerCase()}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Condition</label>
+                  <select value={editForm.condition} onChange={(e) => setEditForm((f) => f && ({ ...f, condition: e.target.value }))}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-200">
+                    {EDIT_CONDITIONS.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+                  </select>
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Condition Note (optional)</label>
+                  <input value={editForm.conditionNote} onChange={(e) => setEditForm((f) => f && ({ ...f, conditionNote: e.target.value }))}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-200" />
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Description</label>
+                  <textarea value={editForm.sellerDescription} onChange={(e) => setEditForm((f) => f && ({ ...f, sellerDescription: e.target.value }))} rows={3}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-200 resize-none" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Seller Desired Payout ($)</label>
+                  <input type="number" min="0" step="0.01" value={editForm.desiredPayoutDollars}
+                    onChange={(e) => setEditForm((f) => f && ({ ...f, desiredPayoutDollars: e.target.value }))}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-200" />
+                </div>
+              </div>
+
+              {editError && <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{editError}</div>}
+            </div>
+
+            <div className="flex justify-end gap-3 px-6 py-4 border-t border-gray-100">
+              <button onClick={() => setEditForm(null)}
+                className="px-4 py-2 text-sm text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors">Cancel</button>
+              <button onClick={saveEdit} disabled={editMutation.isPending}
+                className="px-5 py-2 text-sm font-medium bg-gray-900 hover:bg-gray-700 text-white rounded-xl disabled:opacity-50 transition-colors">
+                {editMutation.isPending ? "Saving…" : "Save Changes"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

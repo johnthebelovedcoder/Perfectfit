@@ -80,7 +80,7 @@ export class SubmissionsController {
   }
 
   @Patch(":id")
-  @Roles("SELLER")
+  @Roles("SELLER", "ADMIN")
   async updateMine(
     @Param("id") id: string,
     @Body(new ZodValidationPipe(UpdateSubmissionSchema)) dto: UpdateSubmission,

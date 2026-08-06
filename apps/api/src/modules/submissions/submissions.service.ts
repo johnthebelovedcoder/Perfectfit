@@ -51,12 +51,21 @@ export class SubmissionsService {
     return submission;
   }
 
-  /** Seller edits their own submission — only while it's still under review. */
+  /**
+   * Edit a submission's details. Admins can edit any submission; sellers only
+   * their own. Allowed while it's still under review (before it's listed live).
+   */
   async updateSubmission(id: string, dto: UpdateSubmission, user: SessionUser) {
     const submission = await this.repo.findById(id);
     if (!submission) throw new NotFoundException("Submission not found");
-    if (submission.seller.userId !== user.id) throw new ForbiddenException();
-    if (!["PENDING_REVIEW", "AWAITING_MORE_INFO"].includes(submission.status)) {
+
+    const isAdmin = user.role === "ADMIN";
+    if (!isAdmin && submission.seller.userId !== user.id) throw new ForbiddenException();
+
+    const editable = isAdmin
+      ? ["PENDING_REVIEW", "AWAITING_MORE_INFO", "UNDER_NEGOTIATION"]
+      : ["PENDING_REVIEW", "AWAITING_MORE_INFO"];
+    if (!editable.includes(submission.status)) {
       throw new BadRequestException("This submission can no longer be edited");
     }
     return this.repo.updateContent(id, { ...dto });

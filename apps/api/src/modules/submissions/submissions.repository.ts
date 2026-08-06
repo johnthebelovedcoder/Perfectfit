@@ -42,7 +42,7 @@ export class SubmissionsRepository {
     const [items, total] = await Promise.all([
       this.db.submission.findMany({
         where,
-        orderBy: { createdAt: "asc" },
+        orderBy: { createdAt: "desc" }, // newest submissions first, matching every other list
         skip: (page - 1) * limit,
         take: limit,
         include: { seller: { include: { user: true } } },
