@@ -4,10 +4,12 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import { CreateSubmissionSchema, CATEGORY_VALUES, categoryLabel } from "@thread/types";
 import { api } from "@/lib/api";
 import type { CreateSubmission } from "@thread/types";
 import { PhotoUpload } from "@/components/submissions/PhotoUpload";
+import { SellerAgreement } from "@/components/SellerAgreement";
 import { formatPrice } from "@thread/utils";
 
 const STEPS = [
@@ -32,6 +34,13 @@ export default function NewSubmissionPage() {
   const [error, setError] = useState<string | null>(null);
   const [payoutInput, setPayoutInput] = useState("");
 
+  // Gate: sellers must accept the Seller Agreement before they can list anything.
+  const { data: profile, isLoading: profileLoading, refetch: refetchProfile } = useQuery({
+    queryKey: ["my-profile"],
+    queryFn: () => api.get<{ agreementAcceptedAt: string | null }>("/sellers/me"),
+    staleTime: 60_000,
+  });
+
   const form = useForm<CreateSubmission>({
     resolver: zodResolver(CreateSubmissionSchema),
     defaultValues: { photos: [], genderTarget: "WOMEN", condition: "GOOD" },
@@ -53,6 +62,23 @@ export default function NewSubmissionPage() {
     }
   };
 
+
+  if (profileLoading) {
+    return (
+      <div className="p-4 sm:p-8 max-w-2xl">
+        <div className="h-8 w-48 bg-gray-100 rounded-xl animate-pulse mb-6" />
+        <div className="h-64 bg-white border border-gray-100 rounded-2xl animate-pulse" />
+      </div>
+    );
+  }
+
+  if (profile && !profile.agreementAcceptedAt) {
+    return (
+      <div className="p-4 sm:p-8">
+        <SellerAgreement onAccepted={() => void refetchProfile()} />
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 sm:p-8 max-w-2xl">

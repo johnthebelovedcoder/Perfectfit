@@ -9,6 +9,7 @@ import {
   ParseIntPipe,
   DefaultValuePipe,
   UseGuards,
+  HttpCode,
 } from "@nestjs/common";
 import { SellersService } from "./sellers.service";
 import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard";
@@ -80,6 +81,14 @@ export class SellersController {
     @CurrentUser() user: SessionUser
   ) {
     const data = await this.sellersService.updateProfile(dto, user);
+    return { data };
+  }
+
+  @Post("me/agreement")
+  @Roles("SELLER")
+  @HttpCode(200)
+  async acceptAgreement(@CurrentUser() user: SessionUser) {
+    const data = await this.sellersService.acceptAgreement(user);
     return { data };
   }
 

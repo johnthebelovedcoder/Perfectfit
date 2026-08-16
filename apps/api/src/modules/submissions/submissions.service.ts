@@ -36,6 +36,10 @@ export class SubmissionsService {
     // No admin approval gate: sellers are live as soon as they register. Identity
     // is checked separately via KYC, which gates payouts rather than listing.
     if (!sellerProfile) throw new ForbiddenException("Seller profile required");
+    // Sellers must accept the Seller Agreement before listing anything.
+    if (!sellerProfile.agreementAcceptedAt) {
+      throw new ForbiddenException("You must accept the Seller Agreement before listing items");
+    }
 
     const submission = await this.repo.create({
       sellerId: sellerProfile.id,

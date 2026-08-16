@@ -65,6 +65,9 @@ async function main() {
           idIssuingCountry: "US",
           kycSubmittedAt: new Date(),
           kycReviewedAt: new Date(),
+          // Pre-accept the Seller Agreement so dev testing isn't gated.
+          agreementAcceptedAt: new Date(),
+          agreementVersion: "2026-08-06",
         },
       },
     },

@@ -270,6 +270,10 @@ model SellerProfile {
   // Stripe Connect (Express) account for verified payouts.
   stripeAccountId String?
 
+  // Seller Agreement — must be accepted before the seller can list items.
+  agreementAcceptedAt DateTime?
+  agreementVersion    String? // which terms version they accepted
+
   submissions Submission[]
   payouts     Payout[]
 

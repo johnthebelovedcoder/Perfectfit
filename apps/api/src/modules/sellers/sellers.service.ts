@@ -4,6 +4,7 @@ import Stripe = require("stripe");
 import { DatabaseService } from "../../common/database/database.service";
 import { encryptField, decryptField } from "../../common/crypto/field-crypto";
 import { buildTimeBuckets } from "../../common/analytics/time-buckets";
+import { SELLER_AGREEMENT_VERSION } from "@thread/types";
 import type { UpdateSellerProfile, SessionUser, SubmitKyc, ReviewKyc } from "@thread/types";
 
 @Injectable()
@@ -239,6 +240,20 @@ export class SellersService {
         ...(dto.bankAccountNumber ? { bankAccountNumber: encryptField(dto.bankAccountNumber) } : {}),
         ...(dto.bankName ? { bankName: dto.bankName } : {}),
       },
+    });
+  }
+
+  /** Seller accepts the current Seller Agreement — required before listing items. */
+  async acceptAgreement(user: SessionUser) {
+    const profile = await this.db.sellerProfile.findUnique({
+      where: { userId: user.id },
+      select: { id: true },
+    });
+    if (!profile) throw new NotFoundException("Seller profile not found");
+    return this.db.sellerProfile.update({
+      where: { id: profile.id },
+      data: { agreementAcceptedAt: new Date(), agreementVersion: SELLER_AGREEMENT_VERSION },
+      select: { id: true, agreementAcceptedAt: true, agreementVersion: true },
     });
   }
 

@@ -1,6 +1,12 @@
 import { z } from "zod";
 import { IdDocumentTypeSchema, KycStatusSchema } from "./enums";
 
+/**
+ * Current Seller Agreement version. Bump this (date string) whenever the terms
+ * change materially — sellers who accepted an older version can be re-prompted.
+ */
+export const SELLER_AGREEMENT_VERSION = "2026-08-06";
+
 /** Minimum seller age, in years. */
 export const KYC_MIN_AGE = 18;
 

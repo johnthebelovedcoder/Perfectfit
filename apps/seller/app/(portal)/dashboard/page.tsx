@@ -43,6 +43,7 @@ const STATUS_LABEL: Record<string, string> = {
 
 interface ProfileData {
   firstName: string;
+  agreementAcceptedAt: string | null;
   stats: { total: number; live: number; sold: number; pending: number; totalEarned: number };
 }
 
@@ -86,6 +87,20 @@ export default function DashboardPage() {
   return (
     <div className="p-4 sm:p-8 space-y-7">
       {subsError && <QueryError onRetry={() => void refetchSubs()} />}
+
+      {/* Seller Agreement prompt — must accept before listing */}
+      {profile && !profile.agreementAcceptedAt && (
+        <div className="bg-gray-900 text-white rounded-2xl p-5 flex items-start gap-3">
+          <Sparkles className="h-5 w-5 shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="font-semibold">Accept the Seller Agreement to start selling</p>
+            <p className="text-sm text-white/70 mt-0.5">Review how payouts and fees work, then agree — it only takes a minute.</p>
+          </div>
+          <Link href="/submissions/new" className="shrink-0 bg-white text-gray-900 text-sm font-semibold px-4 py-2 rounded-xl hover:bg-gray-100 transition-colors">
+            Review &amp; Agree
+          </Link>
+        </div>
+      )}
 
       {/* Header row */}
       <div className="flex items-center justify-between">
