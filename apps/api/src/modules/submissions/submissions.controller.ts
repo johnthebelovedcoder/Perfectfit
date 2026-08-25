@@ -21,13 +21,11 @@ import {
   CreateSubmissionSchema,
   UpdateSubmissionSchema,
   ReviewSubmissionSchema,
-  SellerNegotiationResponseSchema,
 } from "@thread/types";
 import type {
   CreateSubmission,
   UpdateSubmission,
   ReviewSubmission,
-  SellerNegotiationResponse,
   SessionUser,
 } from "@thread/types";
 
@@ -101,27 +99,6 @@ export class SubmissionsController {
     return { data };
   }
 
-  @Patch(":id/negotiate")
-  @Roles("SELLER")
-  async respondToNegotiation(
-    @Param("id") id: string,
-    @Body(new ZodValidationPipe(SellerNegotiationResponseSchema)) dto: SellerNegotiationResponse,
-    @CurrentUser() user: SessionUser
-  ) {
-    const data = await this.submissionsService.respondToNegotiation(id, dto, user);
-    return { data };
-  }
-
-  @Patch(":id/ship")
-  @Roles("SELLER")
-  async markShipped(
-    @Param("id") id: string,
-    @CurrentUser() user: SessionUser
-  ) {
-    const data = await this.submissionsService.markShipped(id, user);
-    return { data };
-  }
-
   @Patch(":id/info-response")
   @Roles("SELLER")
   async respondToMoreInfo(
@@ -133,10 +110,4 @@ export class SubmissionsController {
     return { data };
   }
 
-  @Patch(":id/received")
-  @Roles("ADMIN")
-  async markReceived(@Param("id") id: string) {
-    const data = await this.submissionsService.markReceived(id);
-    return { data };
-  }
 }

@@ -37,11 +37,11 @@ export const UpdateSubmissionSchema = z.object({
 });
 export type UpdateSubmission = z.infer<typeof UpdateSubmissionSchema>;
 
+// Inspection is online only: the admin approves or rejects. Pricing is automatic
+// (buyer price = seller price + markup), so there are no price fields to set.
 export const ReviewSubmissionSchema = z.discriminatedUnion("decision", [
   z.object({
     decision: z.literal("ACCEPT"),
-    retailPrice: z.number().int().positive(),
-    agreedPayoutPrice: z.number().int().positive(),
     adminNote: z.string().max(500).optional(),
   }),
   z.object({
@@ -55,17 +55,6 @@ export const ReviewSubmissionSchema = z.discriminatedUnion("decision", [
   }),
 ]);
 export type ReviewSubmission = z.infer<typeof ReviewSubmissionSchema>;
-
-export const NegotiatePriceSchema = z.object({
-  agreedPayoutPrice: z.number().int().positive(),
-  adminNote: z.string().max(500).optional(),
-});
-export type NegotiatePrice = z.infer<typeof NegotiatePriceSchema>;
-
-export const SellerNegotiationResponseSchema = z.object({
-  accept: z.boolean(),
-});
-export type SellerNegotiationResponse = z.infer<typeof SellerNegotiationResponseSchema>;
 
 export const SubmissionSummarySchema = z.object({
   id: z.string(),

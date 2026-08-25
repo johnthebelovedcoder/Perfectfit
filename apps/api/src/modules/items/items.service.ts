@@ -4,7 +4,7 @@ import type { Queue } from "bull";
 import { ItemsRepository } from "./items.repository";
 import { DatabaseService } from "../../common/database/database.service";
 import { NOTIFICATION_QUEUE, SEARCH_SYNC_QUEUE, IMAGE_MIGRATE_QUEUE, JOB_OPTS } from "../../queues/queue.constants";
-import { generateItemSlug } from "@thread/utils";
+import { generateItemSlug, retailFromSellerPrice } from "@thread/utils";
 import { categoryLabel } from "@thread/types";
 import type { UpdateItem, CatalogueFilter, CreateItemDirect, SessionUser } from "@thread/types";
 import type { Prisma } from "@thread/database";
@@ -84,14 +84,16 @@ export class ItemsService {
       return submission.item;
     }
 
-    // Listable from acceptance onward (the warehouse steps are optional now).
+    // Listable once approved.
     const listable = ["ACCEPTED", "AWAITING_SHIPMENT", "RECEIVED_AT_WAREHOUSE"];
     if (!listable.includes(submission.status)) {
       throw new BadRequestException("Submission must be accepted before it can be listed");
     }
-    if (!submission.retailPrice || !submission.agreedPayoutPrice) {
-      throw new BadRequestException("Retail price and payout price must be set before listing");
-    }
+
+    // Automatic pricing: the seller receives exactly the price they set; buyers
+    // pay that plus Perfect Fit's markup. No manual price entry.
+    const agreedPayoutPrice = submission.desiredPayoutPrice;
+    const retailPrice = retailFromSellerPrice(agreedPayoutPrice);
 
     const titleBase = `${submission.brand ?? submission.itemType} ${categoryLabel(submission.category)}`;
     const slug = generateItemSlug(titleBase, submission.id);
@@ -108,8 +110,8 @@ export class ItemsService {
       genderTarget: submission.genderTarget,
       condition: submission.condition,
       photos: submission.photos,
-      retailPrice: submission.retailPrice,
-      agreedPayoutPrice: submission.agreedPayoutPrice,
+      retailPrice,
+      agreedPayoutPrice,
     });
 
     // Go live immediately, mark the submission LIVE, and index for search.

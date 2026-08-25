@@ -14,8 +14,6 @@ import type {
   CreateSubmission,
   UpdateSubmission,
   ReviewSubmission,
-  NegotiatePrice,
-  SellerNegotiationResponse,
   SessionUser,
 } from "@thread/types";
 
@@ -102,7 +100,7 @@ export class SubmissionsService {
     const submission = await this.repo.findById(id);
     if (!submission) throw new NotFoundException("Submission not found");
 
-    const reviewableStatuses = ["PENDING_REVIEW", "AWAITING_MORE_INFO", "UNDER_NEGOTIATION"];
+    const reviewableStatuses = ["PENDING_REVIEW", "AWAITING_MORE_INFO"];
     if (!reviewableStatuses.includes(submission.status)) {
       throw new BadRequestException(`Cannot review a submission with status ${submission.status}`);
     }
@@ -113,28 +111,13 @@ export class SubmissionsService {
     if (!adminProfile) throw new ForbiddenException();
 
     if (dto.decision === "ACCEPT") {
-      const needsNegotiation = dto.agreedPayoutPrice !== submission.desiredPayoutPrice;
-      const targetStatus = needsNegotiation ? "UNDER_NEGOTIATION" : "ACCEPTED";
-
-      const updated = await this.repo.updateStatus(id, targetStatus, {
-        retailPrice: dto.retailPrice,
-        agreedPayoutPrice: dto.agreedPayoutPrice,
+      // Approve → list live immediately. Pricing is automatic (seller price +
+      // markup) and applied in createFromSubmission — no manual price entry.
+      await this.repo.updateStatus(id, "ACCEPTED", {
         adminNote: dto.adminNote,
         reviewedById: adminProfile.id,
         reviewedAt: new Date(),
       });
-
-      if (needsNegotiation) {
-        await this.notificationQueue.add(
-          "negotiation-offer",
-          { submissionId: id, sellerId: submission.sellerId },
-          JOB_OPTS
-        );
-        return updated;
-      }
-
-      // Final acceptance — list the item live immediately (sets submission → LIVE
-      // and notifies the seller via "item-live").
       await this.itemsService.createFromSubmission(id);
       return this.repo.findById(id);
     }
@@ -178,57 +161,6 @@ export class SubmissionsService {
     throw new BadRequestException("Invalid decision");
   }
 
-  async respondToNegotiation(id: string, dto: SellerNegotiationResponse, user: SessionUser) {
-    const submission = await this.repo.findById(id);
-    if (!submission) throw new NotFoundException();
-    if (submission.seller.userId !== user.id) throw new ForbiddenException();
-    if (submission.status !== "UNDER_NEGOTIATION") {
-      throw new BadRequestException("Submission is not awaiting negotiation response");
-    }
-
-    if (dto.accept) {
-      // Seller accepted the counter-offer — list the item live immediately.
-      await this.repo.updateStatus(id, "ACCEPTED");
-      await this.itemsService.createFromSubmission(id);
-    } else {
-      // Seller declined — mark rejected so it doesn't re-enter the review queue
-      await this.db.submission.update({
-        where: { id },
-        data: {
-          status: "REJECTED" as any,
-          rejectionReason: "OTHER",
-          rejectionNote: "Seller declined the counter-offer.",
-        },
-      });
-      await this.notificationQueue.add(
-        "submission-rejected",
-        { submissionId: id, sellerId: submission.sellerId, canResubmit: true },
-        JOB_OPTS
-      );
-    }
-
-    return { accepted: dto.accept };
-  }
-
-  async markShipped(id: string, user: SessionUser) {
-    const submission = await this.repo.findById(id);
-    if (!submission) throw new NotFoundException();
-    if (submission.seller.userId !== user.id) throw new ForbiddenException();
-    if (submission.status !== "ACCEPTED") {
-      throw new BadRequestException("Submission must be ACCEPTED before marking as shipped");
-    }
-
-    const updated = await this.repo.updateStatus(id, "AWAITING_SHIPMENT");
-
-    await this.notificationQueue.add(
-      "item-shipped",
-      { submissionId: id, sellerId: submission.sellerId },
-      JOB_OPTS
-    );
-
-    return updated;
-  }
-
   async respondToMoreInfo(id: string, additionalInfo: string, user: SessionUser) {
     const submission = await this.repo.findById(id);
     if (!submission) throw new NotFoundException();
@@ -248,15 +180,5 @@ export class SubmissionsService {
         status: "PENDING_REVIEW",
       },
     });
-  }
-
-  async markReceived(id: string) {
-    const submission = await this.repo.findById(id);
-    if (!submission) throw new NotFoundException();
-    if (submission.status !== "AWAITING_SHIPMENT") {
-      throw new BadRequestException("Item must be in AWAITING_SHIPMENT status before warehouse receipt");
-    }
-
-    return this.repo.updateStatus(id, "RECEIVED_AT_WAREHOUSE");
   }
 }

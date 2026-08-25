@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Image from "next/image";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, ArrowLeft, Check, X, DollarSign, MessageCircle, Globe, Pencil } from "lucide-react";
+import { ChevronLeft, ChevronRight, ArrowLeft, Check, X, MessageCircle, Globe, Pencil } from "lucide-react";
 import { api } from "@/lib/api";
 import { getCloudinaryUrl, formatPrice } from "@thread/utils";
 import { categoryLabel, CATEGORY_VALUES } from "@thread/types";
@@ -69,7 +69,7 @@ const STATUS_LABEL: Record<string, string> = {
   PAYOUT_PROCESSED: "Paid Out",
 };
 
-type Panel = "none" | "accept" | "reject" | "negotiate" | "moreInfo";
+type Panel = "none" | "accept" | "reject" | "moreInfo";
 
 
 const REJECTION_REASONS = [
@@ -86,18 +86,12 @@ export default function SubmissionDetailPage({ params }: { params: { id: string 
   const [photoIndex, setPhotoIndex] = useState(0);
   const [panel, setPanel] = useState<Panel>("none");
 
-  // Accept form
-  const [retailPrice, setRetailPrice] = useState("");
-  const [sellerPayout, setSellerPayout] = useState("");
+  // Approve form
   const [adminNote, setAdminNote] = useState("");
 
   // Reject form
   const [rejectionReason, setRejectionReason] = useState("ITEM_CONDITION_BELOW_STANDARD");
   const [rejectionNote, setRejectionNote] = useState("");
-
-  // Negotiate form
-  const [counterOffer, setCounterOffer] = useState("");
-  const [negotiateMsg, setNegotiateMsg] = useState("");
 
   // More info
   const [moreInfoRequest, setMoreInfoRequest] = useState("");
@@ -312,15 +306,11 @@ export default function SubmissionDetailPage({ params }: { params: { id: string 
                 <div className="space-y-2">
                   <button onClick={() => setPanel("accept")}
                     className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl py-3 text-sm font-medium transition-colors">
-                    <Check className="h-4 w-4" /> Accept Submission
+                    <Check className="h-4 w-4" /> Approve &amp; List Live
                   </button>
                   <button onClick={() => setPanel("reject")}
                     className="w-full flex items-center justify-center gap-2 border border-red-200 text-red-600 hover:bg-red-50 rounded-xl py-3 text-sm font-medium transition-colors">
                     <X className="h-4 w-4" /> Reject Submission
-                  </button>
-                  <button onClick={() => setPanel("negotiate")}
-                    className="w-full flex items-center justify-center gap-2 border border-gray-200 text-gray-600 hover:bg-gray-50 rounded-xl py-3 text-sm font-medium transition-colors">
-                    <DollarSign className="h-4 w-4" /> Negotiate Payout
                   </button>
                   <button onClick={() => setPanel("moreInfo")}
                     className="w-full flex items-center justify-center gap-2 border border-gray-200 text-gray-600 hover:bg-gray-50 rounded-xl py-3 text-sm font-medium transition-colors">
@@ -329,30 +319,17 @@ export default function SubmissionDetailPage({ params }: { params: { id: string 
                 </div>
               )}
 
-              {/* Accept panel */}
+              {/* Approve panel — pricing is automatic (seller price + 12%) */}
               {panel === "accept" && (
                 <div className="rounded-xl border border-emerald-200 bg-emerald-50/30 p-4 space-y-3">
-                  <p className="text-sm font-semibold text-emerald-800">Accept & Set Price</p>
-                  <div className="space-y-1">
-                    <label className="text-xs text-gray-500">Retail Price (USD — what buyers pay)</label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
-                      <input type="number" step="0.01" min="0" value={retailPrice} onChange={e => setRetailPrice(e.target.value)}
-                        placeholder="e.g. 35.00"
-                        className="w-full border border-gray-200 rounded-lg pl-7 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-200" />
-                    </div>
+                  <p className="text-sm font-semibold text-emerald-800">Approve &amp; list on the storefront</p>
+                  <div className="rounded-lg bg-white border border-emerald-100 p-3 text-sm space-y-1">
+                    <div className="flex justify-between"><span className="text-gray-500">Seller receives</span><span className="font-medium text-gray-900">{formatPrice(sub.desiredPayoutPrice)}</span></div>
+                    <div className="flex justify-between"><span className="text-gray-500">Buyer pays (+12%)</span><span className="font-semibold text-emerald-700">{formatPrice(Math.round(sub.desiredPayoutPrice * 1.12))}</span></div>
+                    <div className="flex justify-between text-xs"><span className="text-gray-400">Perfect Fit fee</span><span className="text-gray-500">{formatPrice(Math.round(sub.desiredPayoutPrice * 1.12) - sub.desiredPayoutPrice)}</span></div>
                   </div>
                   <div className="space-y-1">
-                    <label className="text-xs text-gray-500">Seller Payout (USD — what seller receives)</label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
-                      <input type="number" step="0.01" min="0" value={sellerPayout} onChange={e => setSellerPayout(e.target.value)}
-                        placeholder="e.g. 15.00"
-                        className="w-full border border-gray-200 rounded-lg pl-7 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-200" />
-                    </div>
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs text-gray-500">Admin Note (optional)</label>
+                    <label className="text-xs text-gray-500">Note to seller (optional)</label>
                     <textarea value={adminNote} onChange={e => setAdminNote(e.target.value)}
                       placeholder="Note for the seller..."
                       rows={2}
@@ -361,10 +338,10 @@ export default function SubmissionDetailPage({ params }: { params: { id: string 
                   <div className="flex gap-2">
                     <button onClick={() => setPanel("none")} className="flex-1 border border-gray-200 text-gray-600 rounded-lg py-2 text-sm font-medium hover:bg-gray-50">Cancel</button>
                     <button
-                      disabled={!retailPrice || !sellerPayout || reviewMutation.isPending}
-                      onClick={() => reviewMutation.mutate({ decision: "ACCEPT", retailPrice: Math.round(parseFloat(retailPrice) * 100), agreedPayoutPrice: Math.round(parseFloat(sellerPayout) * 100), adminNote: adminNote || undefined })}
+                      disabled={reviewMutation.isPending}
+                      onClick={() => reviewMutation.mutate({ decision: "ACCEPT", adminNote: adminNote || undefined })}
                       className="flex-1 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-lg py-2 text-sm font-medium transition-colors">
-                      {reviewMutation.isPending ? "Saving..." : "Accept & List Live"}
+                      {reviewMutation.isPending ? "Listing..." : "Approve & List Live"}
                     </button>
                   </div>
                 </div>
@@ -400,61 +377,6 @@ export default function SubmissionDetailPage({ params }: { params: { id: string 
                 </div>
               )}
 
-              {/* Negotiate panel — uses ACCEPT with different payout; server auto-sets UNDER_NEGOTIATION */}
-              {panel === "negotiate" && (
-                <div className="rounded-xl border border-blue-200 bg-blue-50/30 p-4 space-y-3">
-                  <p className="text-sm font-semibold text-blue-800">Negotiate Payout</p>
-                  <p className="text-xs text-gray-500">Seller is asking {formatPrice(sub.desiredPayoutPrice)}. Set your counter-offer below — the seller will be notified to accept or decline.</p>
-                  <div className="space-y-1">
-                    <label className="text-xs text-gray-500">Retail Price (USD — what buyers pay)</label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
-                      <input type="number" step="0.01" min="0" value={retailPrice} onChange={e => setRetailPrice(e.target.value)}
-                        placeholder="e.g. 35.00"
-                        className="w-full border border-gray-200 rounded-lg pl-7 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200" />
-                    </div>
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs text-gray-500">Counter-Offer Payout (USD — what seller receives)</label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
-                      <input type="number" step="0.01" min="0" value={counterOffer} onChange={e => setCounterOffer(e.target.value)}
-                        placeholder="Your counter-offer..."
-                        className="w-full border border-gray-200 rounded-lg pl-7 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200" />
-                    </div>
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs text-gray-500">Note to Seller (optional)</label>
-                    <textarea value={negotiateMsg} onChange={e => setNegotiateMsg(e.target.value)}
-                      placeholder="Explain your counter-offer..."
-                      rows={2}
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 resize-none" />
-                  </div>
-                  {(() => {
-                    const offerCents = counterOffer ? Math.round(parseFloat(counterOffer) * 100) : 0;
-                    const willAutoAccept = offerCents > 0 && offerCents >= sub.desiredPayoutPrice;
-                    return willAutoAccept ? (
-                      <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-                        ⚠️ This matches or exceeds the seller&apos;s ask ({formatPrice(sub.desiredPayoutPrice)}) — submission will be <strong>immediately accepted</strong> instead of entering negotiation.
-                      </p>
-                    ) : null;
-                  })()}
-                  <div className="flex gap-2">
-                    <button onClick={() => setPanel("none")} className="flex-1 border border-gray-200 text-gray-600 rounded-lg py-2 text-sm font-medium hover:bg-gray-50">Cancel</button>
-                    <button
-                      disabled={!counterOffer || !retailPrice || reviewMutation.isPending}
-                      onClick={() => reviewMutation.mutate({
-                        decision: "ACCEPT",
-                        retailPrice: Math.round(parseFloat(retailPrice) * 100),
-                        agreedPayoutPrice: Math.round(parseFloat(counterOffer) * 100),
-                        adminNote: negotiateMsg || undefined,
-                      })}
-                      className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg py-2 text-sm font-medium transition-colors">
-                      {reviewMutation.isPending ? "Saving..." : "Send Counter-Offer"}
-                    </button>
-                  </div>
-                </div>
-              )}
 
               {/* More Info panel */}
               {panel === "moreInfo" && (

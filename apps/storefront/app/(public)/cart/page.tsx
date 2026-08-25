@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { X, ShoppingBag } from "lucide-react";
 import { useCartStore } from "@/stores/cart.store";
-import { getCloudinaryUrl, calculateShippingCents, FREE_SHIPPING_THRESHOLD_CENTS } from "@thread/utils";
+import { getCloudinaryUrl, calculateShippingCents } from "@thread/utils";
 import { Price } from "@/components/shared/Price";
 import { Header } from "@/components/shared/Header";
 import { Footer } from "@/components/shared/Footer";
@@ -106,18 +106,9 @@ export default function CartPage() {
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-gray-400">Delivery</span>
-                {shipping === 0 ? (
-                  <span className="font-medium text-emerald-600">FREE</span>
-                ) : (
-                  <Price cents={shipping} className="font-medium text-gray-900" />
-                )}
+                <Price cents={shipping} className="font-medium text-gray-900" />
               </div>
-              {shipping > 0 && (
-                <p className="text-[11px] text-gray-400">
-                  Free delivery on orders over{" "}
-                  <Price cents={FREE_SHIPPING_THRESHOLD_CENTS} className="text-[11px] text-gray-400" />.
-                </p>
-              )}
+              <p className="text-[11px] text-gray-400">Shipped directly by the seller.</p>
             </div>
 
             <div className="border-t border-gray-100 pt-4 flex items-center justify-between">

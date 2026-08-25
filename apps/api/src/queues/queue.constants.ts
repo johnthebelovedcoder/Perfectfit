@@ -2,6 +2,7 @@ export const NOTIFICATION_QUEUE = "notification";
 export const PAYOUT_QUEUE = "payout";
 export const SEARCH_SYNC_QUEUE = "search-sync";
 export const IMAGE_MIGRATE_QUEUE = "image-migrate";
+export const ORDERS_QUEUE = "orders";
 
 export const JOB_OPTS = {
   attempts: 3,

@@ -1,11 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowLeft, ChevronLeft, ChevronRight, Check, X, Package, ExternalLink, Pencil } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight, X, ExternalLink, Pencil } from "lucide-react";
 import { api } from "@/lib/api";
 import { getCloudinaryUrl, formatPrice } from "@thread/utils";
 import { categoryLabel, CATEGORY_VALUES } from "@thread/types";
@@ -99,25 +98,11 @@ function formatDate(d: string) {
 
 const STOREFRONT_URL = process.env.NEXT_PUBLIC_STOREFRONT_URL ?? "http://localhost:3000";
 
-// Warehouse shipping address shown to accepted sellers. Override via env in deploy.
-const WAREHOUSE_NAME = process.env.NEXT_PUBLIC_WAREHOUSE_NAME ?? "Perfect Fit Warehouse";
-const WAREHOUSE_ADDRESS =
-  process.env.NEXT_PUBLIC_WAREHOUSE_ADDRESS ?? "1 Warehouse Way, Tulsa, Oklahoma 74103";
-const WAREHOUSE_CONTACT = process.env.NEXT_PUBLIC_WAREHOUSE_CONTACT ?? "+1 (973) 282-6945";
-
 export default function SubmissionDetailPage({ params }: { params: { id: string } }) {
   const { id } = params;
   const qc = useQueryClient();
-  const searchParams = useSearchParams();
   const [photoIndex, setPhotoIndex] = useState(0);
   const [infoResponse, setInfoResponse] = useState("");
-  // Captured from the negotiation email's accept/decline link (?action=...).
-  // We surface it as a confirm prompt rather than auto-acting on page load.
-  const [pendingAction, setPendingAction] = useState<"accept" | "decline" | null>(null);
-  useEffect(() => {
-    const a = searchParams.get("action");
-    if (a === "accept" || a === "decline") setPendingAction(a);
-  }, [searchParams]);
 
   const { data } = useQuery({
     queryKey: ["submission", id],
@@ -128,26 +113,6 @@ export default function SubmissionDetailPage({ params }: { params: { id: string 
   const [mutationError, setMutationError] = useState<string | null>(null);
   const onMutationError = (err: unknown) =>
     setMutationError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
-
-  const negotiateMutation = useMutation({
-    mutationFn: (accept: boolean) => api.patch<unknown>(`/submissions/${id}/negotiate`, { accept }),
-    onSuccess: () => {
-      setMutationError(null);
-      void qc.invalidateQueries({ queryKey: ["submission", id] });
-      void qc.invalidateQueries({ queryKey: ["my-submissions"] });
-    },
-    onError: onMutationError,
-  });
-
-  const shipMutation = useMutation({
-    mutationFn: () => api.patch<unknown>(`/submissions/${id}/ship`, {}),
-    onSuccess: () => {
-      setMutationError(null);
-      void qc.invalidateQueries({ queryKey: ["submission", id] });
-      void qc.invalidateQueries({ queryKey: ["my-submissions"] });
-    },
-    onError: onMutationError,
-  });
 
   const infoResponseMutation = useMutation({
     mutationFn: () => api.patch<unknown>(`/submissions/${id}/info-response`, { additionalInfo: infoResponse }),
@@ -332,69 +297,6 @@ export default function SubmissionDetailPage({ params }: { params: { id: string 
         </div>
       )}
 
-      {/* ── NEGOTIATION ─────────────────────────────────────────────────── */}
-      {sub.status === "UNDER_NEGOTIATION" && sub.agreedPayoutPrice != null && (
-        <div className="mb-6 rounded-2xl border border-blue-200 bg-blue-50/60 p-5 space-y-4">
-          <div>
-            <p className="text-sm font-semibold text-blue-900">Perfect Fit sent you a counter-offer</p>
-            <p className="text-xs text-blue-600 mt-0.5">Review the proposed payout and accept or decline.</p>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="bg-white rounded-xl p-3 border border-blue-100 text-center">
-              <p className="text-xs text-gray-400 mb-1">Your ask</p>
-              <p className="text-lg font-bold text-gray-700">{formatPrice(sub.desiredPayoutPrice)}</p>
-            </div>
-            <div className="bg-white rounded-xl p-3 border border-blue-200 text-center">
-              <p className="text-xs text-blue-500 mb-1">Their offer</p>
-              <p className="text-lg font-bold text-blue-700">{formatPrice(sub.agreedPayoutPrice)}</p>
-            </div>
-          </div>
-          {sub.adminNote && (
-            <div className="rounded-lg bg-white border border-blue-100 p-3">
-              <p className="text-xs text-blue-500 font-medium mb-1">Note from Perfect Fit</p>
-              <p className="text-sm text-gray-700">{sub.adminNote}</p>
-            </div>
-          )}
-          {pendingAction && (
-            <div className="rounded-xl bg-blue-600 text-white p-4 flex items-center justify-between gap-3">
-              <p className="text-sm font-medium">
-                {pendingAction === "accept"
-                  ? `Confirm: accept the offer of ${formatPrice(sub.agreedPayoutPrice)}?`
-                  : "Confirm: decline this offer?"}
-              </p>
-              <div className="flex gap-2 shrink-0">
-                <button
-                  onClick={() => { negotiateMutation.mutate(pendingAction === "accept"); setPendingAction(null); }}
-                  disabled={negotiateMutation.isPending}
-                  className="bg-white text-blue-700 text-sm font-semibold px-4 py-1.5 rounded-lg hover:bg-blue-50 disabled:opacity-60"
-                >
-                  Confirm
-                </button>
-                <button onClick={() => setPendingAction(null)} className="text-white/80 text-sm px-2 hover:text-white">Cancel</button>
-              </div>
-            </div>
-          )}
-          <div className="flex gap-3">
-            <button
-              onClick={() => negotiateMutation.mutate(false)}
-              disabled={negotiateMutation.isPending}
-              className="flex-1 flex items-center justify-center gap-2 border border-red-200 text-red-600 hover:bg-red-50 rounded-xl py-3 text-sm font-medium transition-colors disabled:opacity-50"
-            >
-              <X className="h-4 w-4" />
-              {negotiateMutation.isPending ? "Saving…" : "Decline offer"}
-            </button>
-            <button
-              onClick={() => negotiateMutation.mutate(true)}
-              disabled={negotiateMutation.isPending}
-              className="flex-1 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl py-3 text-sm font-medium transition-colors disabled:opacity-50"
-            >
-              <Check className="h-4 w-4" />
-              {negotiateMutation.isPending ? "Saving…" : `Accept ${formatPrice(sub.agreedPayoutPrice)}`}
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* ── MORE INFO REQUEST ───────────────────────────────────────────── */}
       {sub.status === "AWAITING_MORE_INFO" && sub.moreInfoRequest && (
         <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50/60 p-5 space-y-4">
@@ -426,55 +328,11 @@ export default function SubmissionDetailPage({ params }: { params: { id: string 
         </div>
       )}
 
-      {/* ── ACCEPTED — ship instructions ───────────────────────────────── */}
+      {/* ── ACCEPTED (transient — lists live automatically) ─────────────── */}
       {sub.status === "ACCEPTED" && (
-        <div className="mb-6 rounded-2xl border border-purple-200 bg-purple-50/60 p-5 space-y-4">
-          <div>
-            <p className="text-sm font-semibold text-purple-900">Your item has been accepted 🎉</p>
-            <p className="text-xs text-purple-700 mt-0.5">Please ship it to our warehouse at the address below. Once shipped, click the button so we know to expect it.</p>
-          </div>
-          <div className="rounded-lg bg-white border border-purple-100 p-4 space-y-1 text-sm">
-            <p className="font-semibold text-gray-800">{WAREHOUSE_NAME}</p>
-            <p className="text-gray-600">{WAREHOUSE_ADDRESS}</p>
-            <p className="text-gray-600">{WAREHOUSE_CONTACT}</p>
-            <p className="text-xs text-gray-400 mt-2">Include your submission reference: <span className="font-mono">{ref}</span></p>
-          </div>
-          {sub.agreedPayoutPrice != null && (
-            <div className="flex items-center justify-between rounded-lg bg-white border border-purple-100 px-4 py-3">
-              <span className="text-sm text-gray-500">Agreed payout once sold</span>
-              <span className="font-bold text-emerald-600 text-lg">{formatPrice(sub.agreedPayoutPrice)}</span>
-            </div>
-          )}
-          <button
-            onClick={() => shipMutation.mutate()}
-            disabled={shipMutation.isPending}
-            className="w-full flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl py-3 text-sm font-semibold transition-colors disabled:opacity-50"
-          >
-            <Package className="h-4 w-4" />
-            {shipMutation.isPending ? "Saving…" : "Mark as Shipped"}
-          </button>
-        </div>
-      )}
-
-      {/* ── AWAITING_SHIPMENT ──────────────────────────────────────────── */}
-      {sub.status === "AWAITING_SHIPMENT" && (
-        <div className="mb-6 rounded-2xl border border-purple-200 bg-purple-50/40 p-5">
-          <p className="text-sm font-semibold text-purple-900">Shipment confirmed</p>
-          <p className="text-xs text-purple-600 mt-1">We&apos;ve been notified and are expecting your package. We&apos;ll update you once it arrives at the warehouse.</p>
-          {sub.agreedPayoutPrice != null && (
-            <div className="flex items-center justify-between rounded-lg bg-white border border-purple-100 px-4 py-3 mt-3">
-              <span className="text-sm text-gray-500">Agreed payout once sold</span>
-              <span className="font-bold text-emerald-600 text-lg">{formatPrice(sub.agreedPayoutPrice)}</span>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ── RECEIVED_AT_WAREHOUSE ─────────────────────────────────────── */}
-      {sub.status === "RECEIVED_AT_WAREHOUSE" && (
-        <div className="mb-6 rounded-2xl border border-indigo-200 bg-indigo-50/40 p-5">
-          <p className="text-sm font-semibold text-indigo-900">Item received at warehouse</p>
-          <p className="text-xs text-indigo-600 mt-1">Our team has your item and is preparing it for listing. We&apos;ll let you know once it goes live.</p>
+        <div className="mb-6 rounded-2xl border border-emerald-200 bg-emerald-50/50 p-5">
+          <p className="text-sm font-semibold text-emerald-900">Approved 🎉</p>
+          <p className="text-xs text-emerald-700 mt-1">Your item has been approved and is being listed on the storefront. When it sells, you&apos;ll post it directly to the buyer.</p>
         </div>
       )}
 

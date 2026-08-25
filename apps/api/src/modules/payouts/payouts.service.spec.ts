@@ -47,7 +47,7 @@ describe("PayoutsService.queuePayout — refund guard", () => {
   });
 
   it("creates a payout when the order is delivered and no payout exists", async () => {
-    ctx.db.order.findUnique.mockResolvedValue({ status: "DELIVERED" });
+    ctx.db.order.findUnique.mockResolvedValue({ status: "DELIVERED", totalAmountKobo: 5000, orderItems: [{ priceKobo: 5000 }] });
     ctx.db.item.findUnique.mockResolvedValue(ITEM_WITH_SELLER);
     ctx.db.payout.findUnique.mockResolvedValue(null);
     await ctx.service.queuePayout("item1", "order1", new Date());
@@ -58,8 +58,18 @@ describe("PayoutsService.queuePayout — refund guard", () => {
     expect(ctx.queue.add).toHaveBeenCalledWith("payout-queued", expect.objectContaining({ itemId: "item1" }), expect.anything());
   });
 
+  it("includes the shipping pass-through in the seller's payout amount", async () => {
+    // Order total = item 5000 + shipping 699, single item → seller gets 5000 + 699.
+    ctx.db.order.findUnique.mockResolvedValue({ status: "DELIVERED", totalAmountKobo: 5699, orderItems: [{ priceKobo: 5000 }] });
+    ctx.db.item.findUnique.mockResolvedValue(ITEM_WITH_SELLER);
+    ctx.db.payout.findUnique.mockResolvedValue(null);
+    await ctx.service.queuePayout("item1", "order1", new Date());
+    const arg = ctx.db.payout.create.mock.calls[0]![0];
+    expect(arg.data.amountKobo).toBe(5699);
+  });
+
   it("is idempotent — skips when a payout already exists (job retry)", async () => {
-    ctx.db.order.findUnique.mockResolvedValue({ status: "DELIVERED" });
+    ctx.db.order.findUnique.mockResolvedValue({ status: "DELIVERED", totalAmountKobo: 5000, orderItems: [{ priceKobo: 5000 }] });
     ctx.db.item.findUnique.mockResolvedValue(ITEM_WITH_SELLER);
     ctx.db.payout.findUnique.mockResolvedValue({ id: "existing" });
     await ctx.service.queuePayout("item1", "order1", new Date());
@@ -67,7 +77,7 @@ describe("PayoutsService.queuePayout — refund guard", () => {
   });
 
   it("skips admin-uploaded items with no seller submission", async () => {
-    ctx.db.order.findUnique.mockResolvedValue({ status: "DELIVERED" });
+    ctx.db.order.findUnique.mockResolvedValue({ status: "DELIVERED", totalAmountKobo: 5000, orderItems: [{ priceKobo: 5000 }] });
     ctx.db.item.findUnique.mockResolvedValue({ id: "item1", submissionId: null, submission: null });
     await ctx.service.queuePayout("item1", "order1", new Date());
     expect(ctx.db.payout.create).not.toHaveBeenCalled();

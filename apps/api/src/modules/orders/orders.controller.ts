@@ -76,6 +76,33 @@ export class OrdersController {
     return { data };
   }
 
+  // ─── Seller fulfilment ──────────────────────────────────────────────────────
+
+  /** Orders the seller needs to post to buyers (paid, awaiting dispatch). */
+  @Get("seller/queue")
+  @Roles("SELLER")
+  async sellerQueue(@CurrentUser() user: SessionUser) {
+    const data = await this.ordersService.sellerFulfilmentQueue(user);
+    return { data };
+  }
+
+  @Patch(":id/dispatch")
+  @Roles("SELLER")
+  @HttpCode(200)
+  async sellerDispatch(@Param("id") id: string, @CurrentUser() user: SessionUser) {
+    const data = await this.ordersService.sellerDispatch(id, user);
+    return { data };
+  }
+
+  /** Buyer confirms they received the order — releases the seller's payout window. */
+  @Public()
+  @Post(":token/received")
+  @HttpCode(200)
+  async confirmReceipt(@Param("token") token: string) {
+    const data = await this.ordersService.confirmReceipt(token);
+    return { data };
+  }
+
   // NOTE: payment confirmation is intentionally NOT exposed as an HTTP endpoint.
   // Orders are confirmed exclusively by the signature-verified Stripe webhook
   // (PaymentsController -> PaymentsService.handleStripeWebhook -> confirmPayment),

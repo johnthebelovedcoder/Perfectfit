@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { CheckCircle, Package, Truck, MapPin, ShoppingBag } from "lucide-react";
 import { ReturnButton } from "./ReturnButton";
+import { ConfirmReceiptButton } from "./ConfirmReceiptButton";
 import { ClearCartOnPlaced } from "./ClearCartOnPlaced";
 import { Header } from "@/components/shared/Header";
 import { Footer } from "@/components/shared/Footer";
@@ -213,6 +214,9 @@ export default async function TrackPage({ params, searchParams }: Props) {
 
           {/* Actions */}
           <div className="flex flex-col gap-3">
+            {(order.status === "DISPATCHED" || order.status === "OUT_FOR_DELIVERY") && (
+              <ConfirmReceiptButton token={token} />
+            )}
             {order.status === "DELIVERED" && (
               <ReturnButton token={token} />
             )}

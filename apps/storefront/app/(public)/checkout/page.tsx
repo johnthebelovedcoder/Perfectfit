@@ -12,7 +12,7 @@ import { Footer } from "@/components/shared/Footer";
 import { useCartStore } from "@/stores/cart.store";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { useAuth } from "@/lib/auth";
-import { getCloudinaryUrl, calculateShippingCents, FREE_SHIPPING_THRESHOLD_CENTS } from "@thread/utils";
+import { getCloudinaryUrl, calculateShippingCents } from "@thread/utils";
 import { Price } from "@/components/shared/Price";
 import { api } from "@/lib/api";
 import { loadStripe } from "@stripe/stripe-js";
@@ -385,18 +385,9 @@ export default function CheckoutPage() {
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-400">Shipping</span>
-                    {shipping === 0 ? (
-                      <span className="font-medium text-emerald-600">FREE</span>
-                    ) : (
-                      <Price cents={shipping} className="font-medium text-gray-900" />
-                    )}
+                    <Price cents={shipping} className="font-medium text-gray-900" />
                   </div>
-                  {shipping > 0 && (
-                    <p className="text-[11px] text-gray-400">
-                      Free shipping on orders over{" "}
-                      <Price cents={FREE_SHIPPING_THRESHOLD_CENTS} className="text-[11px] text-gray-400" />.
-                    </p>
-                  )}
+                  <p className="text-[11px] text-gray-400">Shipped directly by the seller.</p>
                   <div className="border-t border-gray-100 pt-3 flex justify-between">
                     <span className="font-bold text-gray-900">Total</span>
                     <Price cents={total} className="text-lg font-bold text-gray-900" />

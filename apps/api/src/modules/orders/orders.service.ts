@@ -11,11 +11,14 @@ import { ConfigService } from "@nestjs/config";
 import Stripe = require("stripe");
 import { OrdersRepository } from "./orders.repository";
 import { DatabaseService } from "../../common/database/database.service";
-import { NOTIFICATION_QUEUE, PAYOUT_QUEUE, JOB_OPTS } from "../../queues/queue.constants";
+import { NOTIFICATION_QUEUE, PAYOUT_QUEUE, ORDERS_QUEUE, JOB_OPTS } from "../../queues/queue.constants";
 import { generateGuestToken, calculateShippingCents } from "@thread/utils";
-import type { GuestCheckout, UpdateOrderStatus } from "@thread/types";
+import type { GuestCheckout, UpdateOrderStatus, SessionUser } from "@thread/types";
 
-const SETTLEMENT_DAYS = 7;
+// Seller is paid this many days after the buyer confirms receipt (a short window
+// for returns). Receipt auto-confirms this many days after the seller dispatches.
+const SETTLEMENT_DAYS = 3;
+const AUTO_CONFIRM_DAYS = 10;
 
 @Injectable()
 export class OrdersService {
@@ -27,9 +30,26 @@ export class OrdersService {
     private db: DatabaseService,
     private config: ConfigService,
     @InjectQueue(NOTIFICATION_QUEUE) private notificationQueue: Queue,
-    @InjectQueue(PAYOUT_QUEUE) private payoutQueue: Queue
+    @InjectQueue(PAYOUT_QUEUE) private payoutQueue: Queue,
+    @InjectQueue(ORDERS_QUEUE) private ordersQueue: Queue
   ) {
     this.stripe = new Stripe(this.config.get<string>("STRIPE_SECRET_KEY")!);
+  }
+
+  /**
+   * Queue seller payouts once the buyer has received the goods. Settlement is
+   * SETTLEMENT_DAYS after receipt so a return can still cancel it.
+   */
+  private async queuePayoutsAfterReceipt(order: { id: string; orderItems: { itemId: string }[] }) {
+    const settlementDueAt = new Date();
+    settlementDueAt.setDate(settlementDueAt.getDate() + SETTLEMENT_DAYS);
+    for (const oi of order.orderItems) {
+      await this.payoutQueue.add(
+        "queue-payout",
+        { itemId: oi.itemId, orderId: order.id, settlementDueAt: settlementDueAt.toISOString() },
+        { ...JOB_OPTS, delay: SETTLEMENT_DAYS * 24 * 60 * 60 * 1000 }
+      );
+    }
   }
 
   /**
@@ -275,21 +295,7 @@ export class OrdersService {
 
     if (dto.status === "DELIVERED") {
       await this.notificationQueue.add("order-delivered", { orderId: id }, JOB_OPTS);
-
-      const settlementDueAt = new Date();
-      settlementDueAt.setDate(settlementDueAt.getDate() + SETTLEMENT_DAYS);
-
-      for (const orderItem of order.orderItems) {
-        await this.payoutQueue.add(
-          "queue-payout",
-          {
-            itemId: orderItem.itemId,
-            orderId: id,
-            settlementDueAt: settlementDueAt.toISOString(),
-          },
-          { ...JOB_OPTS, delay: SETTLEMENT_DAYS * 24 * 60 * 60 * 1000 }
-        );
-      }
+      await this.queuePayoutsAfterReceipt(order);
     }
 
     return updated;
@@ -360,5 +366,60 @@ export class OrdersService {
     }
 
     return { processed: true };
+  }
+
+  // ─── Seller-fulfilled marketplace flow ──────────────────────────────────────
+
+  /** Orders containing this seller's items that are paid and awaiting dispatch. */
+  async sellerFulfilmentQueue(user: SessionUser) {
+    const profile = await this.db.sellerProfile.findUnique({ where: { userId: user.id }, select: { id: true } });
+    if (!profile) throw new ForbiddenException("Seller profile required");
+    return this.repo.findForSeller(profile.id);
+  }
+
+  /** Seller marks an order dispatched to the buyer. Starts the auto-confirm timer. */
+  async sellerDispatch(orderId: string, user: SessionUser) {
+    const profile = await this.db.sellerProfile.findUnique({ where: { userId: user.id }, select: { id: true } });
+    if (!profile) throw new ForbiddenException("Seller profile required");
+
+    const order = await this.repo.findById(orderId);
+    if (!order) throw new NotFoundException("Order not found");
+    const ownsItem = order.orderItems.some((oi) => oi.item?.submission?.sellerId === profile.id);
+    if (!ownsItem) throw new ForbiddenException("This order does not contain your items");
+    if (order.paymentStatus !== "PAID") throw new BadRequestException("Order is not paid");
+    if (order.status !== "PROCESSING") throw new BadRequestException(`Order cannot be dispatched from ${order.status}`);
+
+    const updated = await this.repo.updateStatus(orderId, { status: "DISPATCHED", dispatchedAt: new Date() });
+    await this.notificationQueue.add("order-dispatched", { orderId }, JOB_OPTS);
+    // Auto-confirm receipt if the buyer doesn't, so the seller isn't left unpaid.
+    await this.ordersQueue.add(
+      "auto-confirm-receipt",
+      { orderId },
+      { ...JOB_OPTS, delay: AUTO_CONFIRM_DAYS * 24 * 60 * 60 * 1000 }
+    );
+    return updated;
+  }
+
+  /** Buyer confirms they received the order → releases the payout (after the window). */
+  async confirmReceipt(token: string) {
+    const order = await this.repo.findByGuestToken(token);
+    if (!order) throw new NotFoundException("Order not found");
+    if (!["DISPATCHED", "OUT_FOR_DELIVERY"].includes(order.status)) {
+      throw new BadRequestException("This order isn't awaiting a delivery confirmation");
+    }
+    await this.repo.updateStatus(order.id, { status: "DELIVERED", deliveredAt: new Date() });
+    await this.notificationQueue.add("order-delivered", { orderId: order.id }, JOB_OPTS);
+    await this.queuePayoutsAfterReceipt(order);
+    return { confirmed: true };
+  }
+
+  /** Auto-confirm receipt (from the delayed job) if the buyer never confirmed. */
+  async autoConfirmReceipt(orderId: string) {
+    const order = await this.repo.findById(orderId);
+    if (!order) return;
+    if (!["DISPATCHED", "OUT_FOR_DELIVERY"].includes(order.status)) return; // buyer/admin already moved it
+    this.logger.log(`Auto-confirming receipt for order ${orderId} after ${AUTO_CONFIRM_DAYS} days`);
+    await this.repo.updateStatus(orderId, { status: "DELIVERED", deliveredAt: new Date() });
+    await this.queuePayoutsAfterReceipt(order);
   }
 }

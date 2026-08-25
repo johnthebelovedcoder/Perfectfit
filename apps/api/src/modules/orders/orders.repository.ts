@@ -8,7 +8,25 @@ export class OrdersRepository {
   async findById(id: string) {
     return this.db.order.findUnique({
       where: { id },
-      include: { orderItems: { include: { item: true } } },
+      include: { orderItems: { include: { item: { include: { submission: true } } } } },
+    });
+  }
+
+  /** Paid orders awaiting dispatch that contain any of this seller's items. */
+  async findForSeller(sellerId: string) {
+    return this.db.order.findMany({
+      where: {
+        paymentStatus: "PAID",
+        status: "PROCESSING",
+        orderItems: { some: { item: { submission: { sellerId } } } },
+      },
+      orderBy: { paidAt: "desc" },
+      include: {
+        orderItems: {
+          where: { item: { submission: { sellerId } } },
+          include: { item: { select: { title: true, photos: true, slug: true, agreedPayoutPrice: true, size: true } } },
+        },
+      },
     });
   }
 

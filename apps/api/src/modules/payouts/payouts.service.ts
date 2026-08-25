@@ -88,11 +88,24 @@ export class PayoutsService {
     // may have been returned/refunded/cancelled. Never pay out in those cases —
     // the queued-payout cancellation in processReturn only covers payouts that
     // already exist, not this still-pending job.
+    // Load the order (with items) to guard on status AND compute the seller's
+    // shipping pass-through share of this order.
+    let shippingShareKobo = 0;
     if (orderId) {
-      const order = await this.db.order.findUnique({ where: { id: orderId }, select: { status: true } });
+      const order = await this.db.order.findUnique({
+        where: { id: orderId },
+        select: { status: true, totalAmountKobo: true, orderItems: { select: { priceKobo: true } } },
+      });
       if (order && NON_PAYABLE_ORDER_STATUSES.includes(order.status)) {
         this.logger.warn(`Skipping payout for item ${itemId}: order ${orderId} is ${order.status}`);
         return;
+      }
+      if (order) {
+        const subtotal = order.orderItems.reduce((s, oi) => s + oi.priceKobo, 0);
+        const shipping = Math.max(0, order.totalAmountKobo - subtotal);
+        const count = order.orderItems.length || 1;
+        // Even split of shipping across the order's items (usually 1 item).
+        shippingShareKobo = Math.round(shipping / count);
       }
     }
 
@@ -112,7 +125,8 @@ export class PayoutsService {
       data: {
         sellerId: item.submission.sellerId,
         itemId,
-        amountKobo: item.agreedPayoutPrice,
+        // Seller receives their agreed price PLUS the shipping they covered.
+        amountKobo: item.agreedPayoutPrice + shippingShareKobo,
         status: "QUEUED",
         settlementDueAt,
       },
