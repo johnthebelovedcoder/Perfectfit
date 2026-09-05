@@ -39,6 +39,11 @@ export const envSchema = z.object({
   NEXT_PUBLIC_ADMIN_URL: z.string().url().default("http://localhost:3003"),
 
   SENTRY_DSN: z.string().url().optional(),
+
+  // Google Analytics 4 Data API (admin traffic dashboard). Optional — when either
+  // is unset, the admin GA page shows a "connect" state instead of data.
+  GA_PROPERTY_ID: z.string().optional(), // numeric GA4 property id (not the G-... measurement id)
+  GA_CREDENTIALS_JSON: z.string().optional(), // service-account key JSON (one line)
 });
 
 export type Env = z.infer<typeof envSchema>;

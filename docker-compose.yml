@@ -88,6 +88,8 @@ services:
       NEXT_PUBLIC_STOREFRONT_URL: ${NEXT_PUBLIC_STOREFRONT_URL:-http://localhost:3000}
       NEXT_PUBLIC_SELLER_URL: ${NEXT_PUBLIC_SELLER_URL:-http://localhost:3002}
       NEXT_PUBLIC_ADMIN_URL: ${NEXT_PUBLIC_ADMIN_URL:-http://localhost:3003}
+      GA_PROPERTY_ID: ${GA_PROPERTY_ID:-}
+      GA_CREDENTIALS_JSON: ${GA_CREDENTIALS_JSON:-}
     command: sh -c "pnpm --filter @thread/database exec prisma db push && node dist/main"
 
   storefront:
